@@ -19,6 +19,8 @@ class Dacha extends Model
         'longitude' => 'decimal:8',
     ];
 
+    protected $appends = ['avg_rating', 'reviews_count'];
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -37,5 +39,26 @@ class Dacha extends Model
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function getAvgRatingAttribute(): float
+    {
+        $avg = $this->reviews()->avg('rating');
+        return $avg ? (float) round($avg, 1) : 5.0;
+    }
+
+    public function getReviewsCountAttribute(): int
+    {
+        return $this->reviews()->count();
     }
 }

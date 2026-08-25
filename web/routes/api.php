@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AmenityController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\DachaController;
+use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\Owner\OwnerBookingController;
 use App\Http\Controllers\Api\Owner\OwnerDachaController;
+use App\Http\Controllers\Api\ReviewController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -19,6 +21,7 @@ Route::get('/user', function (Request $request) {
 Route::get('/dachas', [DachaController::class, 'index']);
 Route::get('/dachas/{id}/calendar', [BookingController::class, 'calendar']);
 Route::post('/dachas/{id}/calculate-price', [BookingController::class, 'calculatePrice']);
+Route::get('/dachas/{id}/reviews', [ReviewController::class, 'index']);
 Route::get('/amenities', [AmenityController::class, 'index']);
 
 // ==========================================
@@ -27,8 +30,13 @@ Route::get('/amenities', [AmenityController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dachas/{id}', [DachaController::class, 'show']);
     Route::post('/dachas/{id}/book', [BookingController::class, 'store']);
+    Route::post('/dachas/{id}/reviews', [ReviewController::class, 'store']);
     Route::get('/my-bookings', [BookingController::class, 'myBookings']);
     Route::post('/my-bookings/{id}/cancel', [BookingController::class, 'cancel']);
+
+    // Sevimlilar (Favorites)
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorites/{dachaId}', [FavoriteController::class, 'toggle']);
 });
 
 // ==========================================

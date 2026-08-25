@@ -9,7 +9,10 @@
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏡</text></svg>">
 
-  <!-- Stylesheet -->
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- Main Stylesheet -->
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -96,6 +99,7 @@
        ========================================== -->
   <div class="category-bar">
     <button class="pill-btn active" onclick="filterByCategory(this, 'all')">🏡 Barcha dachalar</button>
+    <button class="pill-btn" onclick="filterByCategory(this, 'favorites')" style="color: #e11d48; border-color: #fecdd3;">❤️ Sevimlilarim</button>
     <button class="pill-btn" onclick="filterByCategory(this, 'pool')">🏊‍♂️ Basseynli</button>
     <button class="pill-btn" onclick="filterByCategory(this, 'sauna')">🧖‍♂️ Sauna / Hammom</button>
     <button class="pill-btn" onclick="filterByCategory(this, 'mountain')">🏔️ Tog' manzarasi</button>
@@ -104,18 +108,31 @@
   </div>
 
   <!-- ==========================================
-       MAIN CONTENT: DACHAS GRID
+       MAIN CONTENT: DACHAS GRID & MAP VIEW
        ========================================== -->
   <main class="main-container">
     <div class="section-header">
-      <h2 class="section-title">Tavsiya etiladigan dachalar</h2>
+      <h2 class="section-title" id="sectionTitle">Tavsiya etiladigan dachalar</h2>
       <span class="results-count" id="resultsCount">Yuklanmoqda...</span>
     </div>
 
+    <!-- Grid View -->
     <div class="dacha-grid" id="dachaGrid">
       <!-- Dachas will be dynamically inserted here via app.js -->
     </div>
+
+    <!-- Map View (Hidden by default or toggled) -->
+    <div id="mapViewContainer" style="display: none; border-radius: var(--radius-xl); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--glass-shadow);">
+      <div id="mainMap" style="width: 100%; height: 650px;"></div>
+    </div>
   </main>
+
+  <!-- Floating Map Toggle Button (Airbnb Style) -->
+  <div class="floating-map-btn-container">
+    <button class="floating-map-btn" id="floatingMapBtn" onclick="toggleViewMode()">
+      <span id="mapBtnIcon">🗺️</span> <span id="mapBtnText">Xaritani ko'rsatish</span>
+    </button>
+  </div>
 
   <!-- ==========================================
        MODAL: DACHA DETAIL & LIVE BOOKING
@@ -275,7 +292,10 @@
     </div>
   </footer>
 
-  <!-- Scripts -->
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- App Client Scripts -->
   <script src="/js/app.js"></script>
 </body>
 </html>

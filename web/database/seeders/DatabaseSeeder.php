@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Amenity;
 use App\Models\Dacha;
 use App\Models\DachaMedia;
+use App\Models\Review;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -50,7 +51,28 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 3. Demo Dachalar
+        // 3. Guest Users for Reviews
+        $guest1 = User::firstOrCreate(
+            ['phone' => '+998911112233'],
+            [
+                'name' => 'Jasur Bekmurodov',
+                'email' => 'jasur@example.com',
+                'role' => 'user',
+                'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+            ]
+        );
+
+        $guest2 = User::firstOrCreate(
+            ['phone' => '+998934445566'],
+            [
+                'name' => 'Madina Usmonova',
+                'email' => 'madina@example.com',
+                'role' => 'user',
+                'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+            ]
+        );
+
+        // 4. Demo Dachalar
         $dachasData = [
             [
                 'name' => 'Chorvoq Mountain Panorama Dacha',
@@ -72,7 +94,18 @@ class DatabaseSeeder extends Seeder
                     'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200&auto=format&fit=crop&q=80',
                     'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&auto=format&fit=crop&q=80',
                     'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1200&auto=format&fit=crop&q=80',
+                ],
+                'reviews' => [
+                    [
+                        'user_id' => $guest1->id,
+                        'rating' => 5,
+                        'comment' => 'Dacha sharoitlari juda ajoyib! Ayniqsa basseyndagi suv toza va harorati qulay ekan. Manzara esa daryo va tog\'larga qaragan, unutilmas dam oldik.',
+                    ],
+                    [
+                        'user_id' => $guest2->id,
+                        'rating' => 5,
+                        'comment' => 'Hamma narsa 5 yulduzli! Tozalik, sauna va karaoke juda yoqdi. Dacha egasi ham juda xushmuomala inson ekan.',
+                    ],
                 ]
             ],
             [
@@ -94,7 +127,13 @@ class DatabaseSeeder extends Seeder
                 'images' => [
                     'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&auto=format&fit=crop&q=80',
                     'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&auto=format&fit=crop&q=80',
+                ],
+                'reviews' => [
+                    [
+                        'user_id' => $guest1->id,
+                        'rating' => 5,
+                        'comment' => 'Haqiqiy archazor va toza havo! Kamin yonida o\'tirish alohida rohat bag\'ishladi.',
+                    ],
                 ]
             ],
             [
@@ -115,8 +154,13 @@ class DatabaseSeeder extends Seeder
                 'amenities' => [1, 4, 7, 8, 9, 12],
                 'images' => [
                     'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&auto=format&fit=crop&q=80',
+                ],
+                'reviews' => [
+                    [
+                        'user_id' => $guest2->id,
+                        'rating' => 4,
+                        'comment' => 'Bochka markaziga juda yaqin, hamma joyga borish oson. Basseyn yaxshi ishladi.',
+                    ],
                 ]
             ],
             [
@@ -137,8 +181,8 @@ class DatabaseSeeder extends Seeder
                 'amenities' => [1, 3, 6, 7, 8, 9, 11],
                 'images' => [
                     'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?w=1200&auto=format&fit=crop&q=80',
-                ]
+                ],
+                'reviews' => []
             ],
             [
                 'name' => 'Humson Green Oasis Villa',
@@ -158,8 +202,8 @@ class DatabaseSeeder extends Seeder
                 'amenities' => [1, 5, 7, 8, 9, 12],
                 'images' => [
                     'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1200&auto=format&fit=crop&q=80',
-                ]
+                ],
+                'reviews' => []
             ],
             [
                 'name' => 'Zomin Tog\' Gavhari Kotteji',
@@ -179,15 +223,16 @@ class DatabaseSeeder extends Seeder
                 'amenities' => [7, 8, 9, 11],
                 'images' => [
                     'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=1200&auto=format&fit=crop&q=80',
-                ]
+                ],
+                'reviews' => []
             ]
         ];
 
         foreach ($dachasData as $data) {
             $images = $data['images'];
             $amenityIds = $data['amenities'];
-            unset($data['images'], $data['amenities']);
+            $reviews = $data['reviews'] ?? [];
+            unset($data['images'], $data['amenities'], $data['reviews']);
 
             $data['user_id'] = $owner->id;
             $dacha = Dacha::create($data);
@@ -201,6 +246,11 @@ class DatabaseSeeder extends Seeder
                     'type' => 'image',
                     'path' => $imgUrl,
                 ]);
+            }
+
+            // Reviews
+            foreach ($reviews as $rev) {
+                $dacha->reviews()->create($rev);
             }
         }
     }
