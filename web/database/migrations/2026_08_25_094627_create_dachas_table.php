@@ -24,8 +24,9 @@ return new class extends Migration
             $table->string('address')->nullable();
             $table->decimal('latitude', 10, 8)->nullable();
             $table->decimal('longitude', 11, 8)->nullable();
-            $table->decimal('default_price', 12, 2)->default(0);
+            $table->decimal('weekday_price', 12, 2)->default(0);
             $table->decimal('weekend_price', 12, 2)->nullable();
+            $table->enum('currency', ['USD', 'UZS'])->default('USD');
             $table->enum('status', ['pending', 'active', 'inactive'])->default('pending');
             $table->timestamps();
         });
