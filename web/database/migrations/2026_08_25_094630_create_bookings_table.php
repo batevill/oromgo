@@ -18,6 +18,9 @@ return new class extends Migration
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('total_price', 12, 2);
+            $table->enum('currency', ['USD', 'UZS'])->default('USD');
+            $table->integer('guests_count')->default(1);
+            $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'confirmed', 'cancelled', 'completed'])->default('pending');
             $table->timestamps();
         });

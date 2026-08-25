@@ -12,6 +12,13 @@ class Dacha extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'weekday_price' => 'decimal:2',
+        'weekend_price' => 'decimal:2',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
+    ];
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -25,5 +32,10 @@ class Dacha extends Model
     public function amenities()
     {
         return $this->belongsToMany(Amenity::class, 'dacha_amenity');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
     }
 }
