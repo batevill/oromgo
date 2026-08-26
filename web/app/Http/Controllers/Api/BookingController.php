@@ -125,6 +125,55 @@ class BookingController extends Controller
             'status' => 'pending',
         ]);
 
+        // 1. Dacha egasiga sayt bildirishnomasi
+        \App\Models\Notification::create([
+            'user_id' => $dacha->user_id,
+            'booking_id' => $booking->id,
+            'type' => 'booking_created',
+            'title' => 'Yangi bron so\'rovi tushdi 🔔',
+            'message' => "{$request->user()->name} sizning \"{$dacha->name}\" dachangizni bron qildi.",
+            'data' => [
+                'booking_id' => $booking->id,
+                'dacha_id' => $dacha->id,
+                'dacha_name' => $dacha->name,
+                'guest_name' => $request->user()->name,
+                'guest_phone' => $request->user()->phone,
+                'start_date' => $start,
+                'end_date' => $end,
+                'guests_count' => $booking->guests_count,
+                'total_price' => $booking->total_price,
+                'currency' => $booking->currency,
+                'notes' => $booking->notes,
+                'status' => 'pending',
+            ],
+        ]);
+
+        // 2. Mijozning o'ziga sayt bildirishnomasi
+        \App\Models\Notification::create([
+            'user_id' => $request->user()->id,
+            'booking_id' => $booking->id,
+            'type' => 'booking_created',
+            'title' => 'Bron so\'rovingiz yuborildi ⏳',
+            'message' => "\"{$dacha->name}\" dachasiga bron so'rovingiz qabul qilindi. Dacha egasi tasdiqlashini kuting.",
+            'data' => [
+                'booking_id' => $booking->id,
+                'dacha_id' => $dacha->id,
+                'dacha_name' => $dacha->name,
+                'start_date' => $start,
+                'end_date' => $end,
+                'total_price' => $booking->total_price,
+                'currency' => $booking->currency,
+                'status' => 'pending',
+            ],
+        ]);
+
+        // 3. Dacha egasiga Telegram orqali jonli xabar va [Tasdiqlash] / [Rad etish] tugmalari
+        try {
+            app(\App\Services\TelegramService::class)->sendBookingRequestToOwner($booking);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Telegram notification error: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'Bron so\'rovingiz muvaffaqiyatli yuborildi. Dacha egasi tasdiqlashini kuting.',
             'booking' => $booking->load('dacha:id,name,region,district,address'),
@@ -152,7 +201,7 @@ class BookingController extends Controller
      */
     public function cancel(Request $request, $id)
     {
-        $booking = Booking::where('id', $id)
+        $booking = Booking::with('dacha.user')->where('id', $id)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
@@ -161,6 +210,31 @@ class BookingController extends Controller
         }
 
         $booking->update(['status' => 'cancelled']);
+
+        // Egasi uchun bildirishnoma yaratish
+        if ($booking->dacha && $booking->dacha->user_id) {
+            \App\Models\Notification::create([
+                'user_id' => $booking->dacha->user_id,
+                'booking_id' => $booking->id,
+                'type' => 'booking_cancelled',
+                'title' => 'Bron mijoz tomonidan bekor qilindi ℹ️',
+                'message' => "{$request->user()->name} \"{$booking->dacha->name}\" dachasidagi bronini bekor qildi.",
+                'data' => [
+                    'booking_id' => $booking->id,
+                    'dacha_name' => $booking->dacha->name,
+                    'guest_name' => $request->user()->name,
+                    'start_date' => $booking->start_date ? $booking->start_date->format('Y-m-d') : '',
+                    'end_date' => $booking->end_date ? $booking->end_date->format('Y-m-d') : '',
+                    'status' => 'cancelled',
+                ],
+            ]);
+
+            try {
+                app(\App\Services\TelegramService::class)->sendBookingCancelledToOwner($booking);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Telegram notification error: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'message' => 'Bron muvaffaqiyatli bekor qilindi.',

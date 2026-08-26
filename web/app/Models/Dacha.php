@@ -26,6 +26,11 @@ class Dacha extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function media()
     {
         return $this->hasMany(DachaMedia::class);

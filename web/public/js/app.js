@@ -16,6 +16,10 @@ const state = {
   isMapView: false,
   mapInstance: null,
   markersLayer: null,
+  notifications: [],
+  unreadNotificationsCount: 0,
+  hasTelegramLinked: false,
+  notifFilter: 'all',
   token: localStorage.getItem('oromgo_token') || '',
   user: JSON.parse(localStorage.getItem('oromgo_user') || 'null'),
 };
@@ -27,10 +31,17 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
   setupEventListeners();
   updateAuthUI();
+  
+  // Polling for live notifications every 20 seconds
+  setInterval(() => {
+    if (state.token) {
+      loadNotifications(false);
+    }
+  }, 20000);
 });
 
 async function initApp() {
-  await Promise.all([loadAmenities(), loadDachas(), loadFavorites()]);
+  await Promise.all([loadAmenities(), loadDachas(), loadFavorites(), loadNotifications()]);
 }
 
 function setupEventListeners() {
@@ -850,19 +861,39 @@ function openAuthModal(notice = '') {
   openModal('authModal');
 }
 
+async function loginAsDemo(role = 'owner') {
+  try {
+    const res = await fetch(`${API_BASE}/demo-login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ role })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      state.token = data.token;
+      state.user = data.user;
+      localStorage.setItem('oromgo_token', state.token);
+      localStorage.setItem('oromgo_user', JSON.stringify(state.user));
+      updateAuthUI();
+      closeModal('authModal');
+      showToast(`${role === 'owner' ? 'Dacha egasi' : 'Mijoz'} sifatida tizimga kirdingiz!`, 'success');
+      loadFavorites();
+      loadNotifications(true);
+    } else {
+      showToast('Kirishda xatolik yuz berdi', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  }
+}
+
 function loginAsDemoOwner() {
-  state.token = 'demo_token_123';
-  state.user = {
-    name: 'Alisher Rahimov',
-    role: 'owner',
-    phone: '+998901234567'
-  };
-  localStorage.setItem('oromgo_token', state.token);
-  localStorage.setItem('oromgo_user', JSON.stringify(state.user));
-  updateAuthUI();
-  closeModal('authModal');
-  showToast('Dacha egasi sifatida tizimga kirdingiz!', 'success');
-  loadFavorites();
+  loginAsDemo('owner');
 }
 
 function updateAuthUI() {
@@ -914,29 +945,330 @@ function filterByCategory(btn, category) {
 }
 
 // ==========================================
-// TOAST NOTIFICATIONS
+// NOTIFICATIONS CENTER & TELEGRAM BOT INTEGRATION
 // ==========================================
 
-function showToast(message, type = 'success') {
-  let container = document.getElementById('toastContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toastContainer';
-    container.className = 'toast-container';
-    document.body.appendChild(container);
+async function loadNotifications(render = true) {
+  if (!state.token) {
+    state.notifications = [];
+    state.unreadNotificationsCount = 0;
+    updateNotificationBadgeUI();
+    return;
   }
 
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
+  try {
+    const res = await fetch(`${API_BASE}/notifications`, {
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
 
-  container.appendChild(toast);
+    if (res.ok) {
+      const data = await res.json();
+      state.notifications = data.notifications?.data || [];
+      state.unreadNotificationsCount = data.unread_count || 0;
+      state.hasTelegramLinked = data.has_telegram_linked || false;
 
-  setTimeout(() => {
-    toast.remove();
-  }, 4000);
+      updateNotificationBadgeUI();
+      if (render) {
+        renderNotificationsList();
+      }
+    }
+  } catch (err) {
+    console.error('Bildirishnomalarni yuklashda xatolik:', err);
+  }
+}
+
+function updateNotificationBadgeUI() {
+  const badge = document.getElementById('unreadBadgeCount');
+  if (!badge) return;
+
+  if (state.unreadNotificationsCount > 0) {
+    badge.textContent = state.unreadNotificationsCount > 99 ? '99+' : state.unreadNotificationsCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  // Update counters in tabs
+  const totalCountEl = document.getElementById('notifTotalCount');
+  const unreadCountEl = document.getElementById('notifUnreadCount');
+  if (totalCountEl) totalCountEl.textContent = state.notifications.length;
+  if (unreadCountEl) unreadCountEl.textContent = state.unreadNotificationsCount;
+
+  // Update Telegram Banner
+  const tgStatus = document.getElementById('telegramStatusText');
+  const tgBtn = document.querySelector('.btn-telegram-sm');
+  if (tgStatus) {
+    if (state.hasTelegramLinked) {
+      tgStatus.innerHTML = '✅ Telegram profilingiz muvaffaqiyatli ulangan. Barcha xabarnomalar botga kelmoqda.';
+      if (tgBtn) tgBtn.innerHTML = '<span>💬 Botni ochish</span>';
+    } else {
+      tgStatus.innerHTML = 'Yangi bron so\'rovlarini Telegramda ko\'rish va <b>[Tasdiqlash]</b> tugmalarini bosish uchun botni ulang.';
+      if (tgBtn) tgBtn.innerHTML = '<span>🚀 Botga ulanish</span>';
+    }
+  }
+}
+
+function toggleNotificationsModal() {
+  if (!state.token) {
+    openAuthModal('Bildirishnomalarni ko\'rish uchun tizimga kiring');
+    return;
+  }
+  openModal('notificationModal');
+  loadNotifications(true);
+}
+
+function filterNotifications(type, btn) {
+  state.notifFilter = type;
+  document.querySelectorAll('.notif-tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderNotificationsList();
+}
+
+function renderNotificationsList() {
+  const list = document.getElementById('notificationList');
+  if (!list) return;
+
+  let items = [...state.notifications];
+
+  if (state.notifFilter === 'unread') {
+    items = items.filter(n => !n.is_read);
+  } else if (state.notifFilter === 'bookings') {
+    items = items.filter(n => ['booking_created', 'booking_confirmed', 'booking_cancelled'].includes(n.type));
+  }
+
+  if (items.length === 0) {
+    list.innerHTML = `
+      <div style="text-align: center; padding: 3.5rem 1rem; color: var(--text-muted);">
+        <div style="font-size: 3rem; margin-bottom: 0.75rem;">📭</div>
+        <h4 style="font-size: 1.1rem; color: var(--dark); margin-bottom: 0.25rem;">Bildirishnomalar yo'q</h4>
+        <p style="font-size: 0.875rem;">Hozircha hech qanday yangi xabarnoma mavjud emas.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const isOwnerOrAdmin = state.user && (state.user.role === 'owner' || state.user.role === 'admin' || state.user.role === 'super_admin');
+
+  list.innerHTML = items.map(n => {
+    const isUnread = !n.is_read;
+    const data = n.data || {};
+    const bookingId = n.booking_id || data.booking_id;
+    const timeAgo = formatTimeAgo(n.created_at);
+
+    let typeBadgeLabel = 'Xabar';
+    let icon = 'ℹ️';
+
+    if (n.type === 'booking_created') {
+      typeBadgeLabel = 'Yangi Bron';
+      icon = '🔔';
+    } else if (n.type === 'booking_confirmed') {
+      typeBadgeLabel = 'Tasdiqlangan';
+      icon = '✅';
+    } else if (n.type === 'booking_cancelled') {
+      typeBadgeLabel = 'Bekor qilingan';
+      icon = '❌';
+    } else if (n.type === 'booking_reminder') {
+      typeBadgeLabel = 'Eslatma';
+      icon = '⏰';
+    }
+
+    // Owner action buttons if booking is pending
+    const showOwnerActions = isOwnerOrAdmin && n.type === 'booking_created' && bookingId && data.status === 'pending';
+
+    return `
+      <div class="notif-card ${isUnread ? 'unread' : ''}" onclick="markNotificationAsRead(${n.id})">
+        <div class="notif-card-header">
+          <div class="notif-title-row">
+            <span>${icon}</span>
+            <strong style="font-size: 0.95rem; color: var(--dark);">${escapeHtml(n.title)}</strong>
+            <span class="notif-type-badge ${n.type}">${typeBadgeLabel}</span>
+          </div>
+          <span class="notif-time">${timeAgo}</span>
+        </div>
+
+        <p style="font-size: 0.875rem; color: var(--dark-light); margin: 0; line-height: 1.5;">${escapeHtml(n.message)}</p>
+
+        ${data.dacha_name || data.start_date ? `
+          <div class="notif-details-grid">
+            ${data.dacha_name ? `
+              <div class="notif-detail-item">
+                <span class="notif-detail-label">🏡 Dacha:</span>
+                <span class="notif-detail-val">${escapeHtml(data.dacha_name)}</span>
+              </div>
+            ` : ''}
+            ${data.guest_name ? `
+              <div class="notif-detail-item">
+                <span class="notif-detail-label">👤 Mijoz:</span>
+                <span class="notif-detail-val">${escapeHtml(data.guest_name)}</span>
+              </div>
+            ` : ''}
+            ${data.guest_phone ? `
+              <div class="notif-detail-item">
+                <span class="notif-detail-label">📞 Tel:</span>
+                <span class="notif-detail-val">${escapeHtml(data.guest_phone)}</span>
+              </div>
+            ` : ''}
+            ${data.start_date ? `
+              <div class="notif-detail-item">
+                <span class="notif-detail-label">📅 Sanalar:</span>
+                <span class="notif-detail-val">${data.start_date} — ${data.end_date || ''}</span>
+              </div>
+            ` : ''}
+            ${data.total_price ? `
+              <div class="notif-detail-item">
+                <span class="notif-detail-label">💰 Summa:</span>
+                <span class="notif-detail-val" style="color: var(--primary);">${parseFloat(data.total_price).toLocaleString()} ${data.currency || 'USD'}</span>
+              </div>
+            ` : ''}
+            ${data.notes ? `
+              <div class="notif-detail-item" style="grid-column: 1 / -1;">
+                <span class="notif-detail-label">💬 Izoh:</span>
+                <span class="notif-detail-val" style="font-weight: 500; color: var(--text-muted);">${escapeHtml(data.notes)}</span>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        ${showOwnerActions ? `
+          <div class="notif-actions" onclick="event.stopPropagation()">
+            <button class="btn-confirm-sm" onclick="handleOwnerNotificationDecision(${bookingId}, 'confirm', ${n.id})">
+              <span>✅</span> Tasdiqlash
+            </button>
+            <button class="btn-reject-sm" onclick="handleOwnerNotificationDecision(${bookingId}, 'reject', ${n.id})">
+              <span>❌</span> Rad etish
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function markNotificationAsRead(id) {
+  const notif = state.notifications.find(n => n.id === id);
+  if (notif && notif.is_read) return;
+
+  if (notif) notif.is_read = true;
+  state.unreadNotificationsCount = Math.max(0, state.unreadNotificationsCount - 1);
+  updateNotificationBadgeUI();
+
+  try {
+    await fetch(`${API_BASE}/notifications/${id}/read`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+  } catch (err) {}
+}
+
+async function markAllNotificationsAsRead() {
+  state.notifications.forEach(n => n.is_read = true);
+  state.unreadNotificationsCount = 0;
+  updateNotificationBadgeUI();
+  renderNotificationsList();
+
+  try {
+    await fetch(`${API_BASE}/notifications/read-all`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+    showToast('Barcha bildirishnomalar o\'qilgan deb belgilandi.', 'success');
+  } catch (err) {}
+}
+
+async function handleOwnerNotificationDecision(bookingId, action, notifId) {
+  try {
+    const endpoint = action === 'confirm'
+      ? `${API_BASE}/owner/bookings/${bookingId}/confirm`
+      : `${API_BASE}/owner/bookings/${bookingId}/reject`;
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.message || 'Xatolik yuz berdi', 'error');
+      return;
+    }
+
+    showToast(data.message || (action === 'confirm' ? 'Bron tasdiqlandi!' : 'Bron rad etildi.'), 'success');
+    
+    // Mark this notification as read and update state
+    await markNotificationAsRead(notifId);
+    await loadNotifications(true);
+  } catch (err) {
+    console.error(err);
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  }
+}
+
+async function openTelegramBotLink() {
+  if (!state.token) {
+    openAuthModal('Telegram botni ulash uchun avval tizimga kiring');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/telegram/bot-link`, {
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.link) {
+        window.open(data.link, '_blank');
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffSec = Math.floor((now - date) / 1000);
+
+  if (diffSec < 60) return 'Hozirgina';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} daqiqa oldin`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} soat oldin`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay} kun oldin`;
+
+  return date.toISOString().split('T')[0];
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 const style = document.createElement('style');
 style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
 document.head.appendChild(style);
+

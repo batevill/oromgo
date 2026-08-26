@@ -4,10 +4,12 @@ Ushbu ro'yxat Oromgo platformasida navbatda turgan va amalga oshirilishi kerak b
 
 ---
 
-### [ ] 1. 💬 Telegram Bot orqali Jonli Xabarnomalar (Notifications)
-- [ ] Dacha egasiga yangi bron tushganda Telegram bot orqali darhol xabar va `[Tasdiqlash]` / `[Rad etish]` tugmalarini yuborish.
-- [ ] Bron tasdiqlanganda yoki bekor qilinganda mijozga Telegram orqali xabar yuborish.
-- [ ] Eslatma xabarlari (Bron sanasidan 1 kun oldin eslatish).
+### [x] 1. 💬 Telegram Bot orqali Jonli Xabarnomalar (Notifications) & Sayt Bildirishnomalar Markazi
+- [x] Dacha egasiga yangi bron tushganda Telegram bot orqali darhol xabar va `[Tasdiqlash]` / `[Rad etish]` tugmalarini yuborish.
+- [x] Bron tasdiqlanganda yoki bekor qilinganda mijozga Telegram orqali xabar yuborish.
+- [x] Eslatma xabarlari (Bron sanasidan 1 kun oldin mijoz va dacha egasiga eslatish).
+- [x] Saytda to'liq Bildirishnomalar markazi (Notification Center), o'qilmaganlar hisoblagichi (badge) va dacha egasi uchun to'g'ridan-to'g'ri saytdan tasdiqlash/rad etish tugmalari.
+- [x] Telegram bot bilan sayt hisobini 1 bosishda ulash (Deep link: `/start bind_{userId}`).
 
 ---
 

@@ -979,3 +979,324 @@ body {
     display: none;
   }
 }
+
+/* ==========================================================================
+   NOTIFICATION CENTER & BELL DESIGN SYSTEM
+   ========================================================================== */
+
+.notification-bell-btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: white;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.notification-bell-btn:hover {
+  background: var(--bg-page);
+  transform: scale(1.05);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  min-width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid white;
+  animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.notification-modal-content {
+  max-width: 680px;
+  padding: 0;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.notification-modal-header {
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notification-header-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: #e0f2fe;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+
+.btn-text-sm {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.825rem;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.btn-text-sm:hover {
+  background: var(--primary-light);
+}
+
+/* Telegram Link Promo Card */
+.telegram-link-card {
+  margin: 1.25rem 1.5rem 0.75rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.telegram-link-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.telegram-badge-icon {
+  width: 38px;
+  height: 38px;
+  background: #0ea5e9;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-telegram-sm {
+  background: #0284c7;
+  color: white;
+  border: none;
+  font-weight: 700;
+  font-size: 0.825rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-telegram-sm:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+
+/* Tabs */
+.notification-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: white;
+}
+
+.notif-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.notif-tab-btn.active {
+  background: var(--dark);
+  color: white;
+}
+
+.notif-tab-btn:hover:not(.active) {
+  background: var(--bg-page);
+  color: var(--dark);
+}
+
+/* Notification List Body */
+.notification-list-body {
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: var(--bg-page);
+}
+
+/* Notification Item Card */
+.notif-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  transition: var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  position: relative;
+}
+
+.notif-card.unread {
+  border-left: 4px solid var(--primary);
+  background: #ffffff;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.notif-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.notif-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notif-type-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.notif-type-badge.booking_created { background: #fef3c7; color: #b45309; }
+.notif-type-badge.booking_confirmed { background: #dcfce7; color: #15803d; }
+.notif-type-badge.booking_cancelled { background: #fee2e2; color: #b91c1c; }
+.notif-type-badge.booking_reminder { background: #e0e7ff; color: #4338ca; }
+.notif-type-badge.info { background: #f1f5f9; color: #475569; }
+
+.notif-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.notif-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+  background: var(--bg-page);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.825rem;
+}
+
+.notif-detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-detail-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.notif-detail-val {
+  font-weight: 700;
+  color: var(--dark);
+}
+
+/* Action Buttons for Dacha Owner */
+.notif-actions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--border);
+}
+
+.btn-confirm-sm {
+  flex: 1;
+  background: #10b981;
+  color: white;
+  border: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: var(--transition-fast);
+}
+
+.btn-confirm-sm:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.btn-reject-sm {
+  flex: 1;
+  background: #ef4444;
+  color: white;
+  border: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: var(--transition-fast);
+}
+
+.btn-reject-sm:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+

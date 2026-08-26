@@ -49,14 +49,63 @@ class OwnerBookingController extends Controller
         $booking->update(['status' => 'confirmed']);
 
         // Shu sanalardagi boshqa kutilayotgan (pending) so'rovlarni avtomatik bekor qilish
-        Booking::where('dacha_id', $booking->dacha_id)
+        $overlappingBookings = Booking::where('dacha_id', $booking->dacha_id)
             ->where('id', '!=', $booking->id)
             ->where('status', 'pending')
             ->where(function ($q) use ($booking) {
                 $q->where('start_date', '<=', $booking->end_date)
                   ->where('end_date', '>=', $booking->start_date);
             })
-            ->update(['status' => 'cancelled']);
+            ->get();
+
+        foreach ($overlappingBookings as $overlap) {
+            $overlap->update(['status' => 'cancelled']);
+            // Bekor qilingan boshqa mijozlarga bildirishnoma
+            \App\Models\Notification::create([
+                'user_id' => $overlap->user_id,
+                'booking_id' => $overlap->id,
+                'type' => 'booking_cancelled',
+                'title' => 'Bron bekor qilindi ❌',
+                'message' => "\"{$booking->dacha->name}\" dachasiga so'rovingiz ushbu sanalar boshqa mijozga tasdiqlangani sababli bekor qilindi.",
+                'data' => [
+                    'booking_id' => $overlap->id,
+                    'dacha_name' => $booking->dacha->name,
+                    'start_date' => $overlap->start_date->format('Y-m-d'),
+                    'end_date' => $overlap->end_date->format('Y-m-d'),
+                    'status' => 'cancelled',
+                ],
+            ]);
+
+            try {
+                app(\App\Services\TelegramService::class)->sendBookingRejectedToCustomer($overlap);
+            } catch (\Throwable $e) {}
+        }
+
+        // Mijozga sayt bildirishnomasi
+        \App\Models\Notification::create([
+            'user_id' => $booking->user_id,
+            'booking_id' => $booking->id,
+            'type' => 'booking_confirmed',
+            'title' => 'Broningiz tasdiqlandi! 🎉',
+            'message' => "\"{$booking->dacha->name}\" dachasiga yuborgan bron so'rovingiz tasdiqlandi.",
+            'data' => [
+                'booking_id' => $booking->id,
+                'dacha_id' => $booking->dacha_id,
+                'dacha_name' => $booking->dacha->name,
+                'start_date' => $booking->start_date->format('Y-m-d'),
+                'end_date' => $booking->end_date->format('Y-m-d'),
+                'total_price' => $booking->total_price,
+                'currency' => $booking->currency,
+                'status' => 'confirmed',
+            ],
+        ]);
+
+        // Mijozga Telegram xabari
+        try {
+            app(\App\Services\TelegramService::class)->sendBookingConfirmedToCustomer($booking);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Telegram confirmation send failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Bron muvaffaqiyatli tasdiqlandi!',
@@ -72,6 +121,30 @@ class OwnerBookingController extends Controller
         $booking = $this->findOwnerBooking($request, $id);
 
         $booking->update(['status' => 'cancelled']);
+
+        // Mijozga sayt bildirishnomasi
+        \App\Models\Notification::create([
+            'user_id' => $booking->user_id,
+            'booking_id' => $booking->id,
+            'type' => 'booking_cancelled',
+            'title' => 'Bron so\'rovi rad etildi ❌',
+            'message' => "\"{$booking->dacha->name}\" dachasiga yuborgan bron so'rovingiz egasi tomonidan rad etildi.",
+            'data' => [
+                'booking_id' => $booking->id,
+                'dacha_id' => $booking->dacha_id,
+                'dacha_name' => $booking->dacha->name,
+                'start_date' => $booking->start_date->format('Y-m-d'),
+                'end_date' => $booking->end_date->format('Y-m-d'),
+                'status' => 'cancelled',
+            ],
+        ]);
+
+        // Mijozga Telegram xabari
+        try {
+            app(\App\Services\TelegramService::class)->sendBookingRejectedToCustomer($booking);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Telegram rejection send failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Bron so\'rovi rad etildi / bekor qilindi.',

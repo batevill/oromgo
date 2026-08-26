@@ -31,6 +31,13 @@
         <button class="btn btn-accent" onclick="openOwnerModal()">
           <span>➕</span> E'lon berish
         </button>
+
+        <!-- Notification Bell Button -->
+        <button class="btn btn-icon notification-bell-btn" id="notificationBellBtn" onclick="toggleNotificationsModal()" title="Bildirishnomalar">
+          <span>🔔</span>
+          <span class="notification-badge" id="unreadBadgeCount" style="display: none;">0</span>
+        </button>
+
         <div id="navUserBox">
           <button class="btn btn-outline" onclick="openAuthModal()">Kirish</button>
         </div>
@@ -270,9 +277,68 @@
           <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 0.5rem; font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">YOKI TEST UCHUN</span>
         </div>
 
-        <button class="btn btn-outline" onclick="loginAsDemoOwner()" style="background: var(--bg-page); border-style: dashed;">
-          ⚡ Dacha Egasi sifatida sinab ko'rish
+        <button class="btn btn-outline" onclick="loginAsDemo('owner')" style="background: var(--bg-page); border-style: dashed;">
+          ⚡ Dacha Egasi (Alisher) sifatida sinab ko'rish
         </button>
+        <button class="btn btn-outline" onclick="loginAsDemo('user')" style="background: var(--bg-page); border-style: dashed;">
+          👤 Mijoz (Jasur) sifatida sinab ko'rish
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: NOTIFICATION CENTER (BILDIRISHNOMALAR)
+       ========================================== -->
+  <div class="modal-backdrop" id="notificationModal">
+    <div class="modal-content notification-modal-content">
+      <div class="notification-modal-header">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <div class="notification-header-icon">🔔</div>
+          <div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--dark); margin: 0;">Bildirishnomalar markazi</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Bronlar, tasdiqlashlar va Telegram bot integratsiyasi</p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="btn-text-sm" onclick="markAllNotificationsAsRead()" title="Barchasini o'qilgan deb belgilash">
+            ✓ Barchasini o'qish
+          </button>
+          <button class="modal-close" onclick="closeModal('notificationModal')">✕</button>
+        </div>
+      </div>
+
+      <!-- Telegram Bot Link Promo Box -->
+      <div class="telegram-link-card" id="telegramLinkCard">
+        <div class="telegram-link-info">
+          <div class="telegram-badge-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+          </div>
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: #0c4a6e;">Telegram Botga ulanish</h4>
+            <p style="font-size: 0.8rem; margin: 0.15rem 0 0; color: #0369a1;" id="telegramStatusText">
+              Yangi bron so'rovlarini Telegramda ko'rish va <b>[Tasdiqlash]</b> tugmalarini bosish uchun botni ulang.
+            </p>
+          </div>
+        </div>
+        <button class="btn btn-telegram-sm" onclick="openTelegramBotLink()">
+          <span>🚀 Botga ulanish</span>
+        </button>
+      </div>
+
+      <!-- Notification Filter Tabs -->
+      <div class="notification-tabs">
+        <button class="notif-tab-btn active" onclick="filterNotifications('all', this)">Barchasi (<span id="notifTotalCount">0</span>)</button>
+        <button class="notif-tab-btn" onclick="filterNotifications('unread', this)">O'qilmagan (<span id="notifUnreadCount">0</span>)</button>
+        <button class="notif-tab-btn" onclick="filterNotifications('bookings', this)">Bron so'rovlari</button>
+      </div>
+
+      <!-- Notifications List Body -->
+      <div class="notification-list-body" id="notificationList">
+        <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📭</div>
+          <p>Yuklanmoqda...</p>
+        </div>
       </div>
     </div>
   </div>

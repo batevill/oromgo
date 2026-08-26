@@ -39,4 +39,14 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Dacha::class, 'favorites');
     }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class)->latest();
+    }
+
+    public function unreadNotifications()
+    {
+        return $this->hasMany(Notification::class)->where('is_read', false)->latest();
+    }
 }
