@@ -20,7 +20,8 @@ Ushbu ro'yxat Oromgo platformasida navbatda turgan va amalga oshirilishi kerak b
 
 ---
 
-### [ ] 3. 📱 Mobil Ilova (Mobile App — Flutter / React Native)
-- [ ] `oromgo/mobile` katalogida mobil ilova loyihasini yaratish.
-- [ ] Barcha mavjud Backend API larni mobil ilovaga ulash (Auth, Dachalar, Qidiruv, Kalendar, Bron qilish).
-- [ ] iOS va Android uchun chiroyli mobil interfeysni qurish.
+### [x] 3. 📱 Mobil Ilova (Mobile App — Flutter)
+- [x] `oromgo/apk` katalogida mobil ilova loyihasini yaratish.
+- [x] Barcha mavjud Backend API larni mobil ilovaga ulash (Auth, Dachalar, Qidiruv, Kalendar, Bron qilish, Sevimlilar, Bildirishnomalar).
+- [x] iOS va Android uchun chiroyli, Airbnb uslubidagi mobil interfeysni qurish.
+
