@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../core/constants/app_colors.dart';
 import '../core/utils/formatters.dart';
 import '../models/dacha_model.dart';
+import '../providers/auth_provider.dart';
 import '../providers/favorite_provider.dart';
+import '../views/profile/auth_modal.dart';
 
 class DachaCard extends StatelessWidget {
   final DachaModel dacha;
@@ -19,6 +21,7 @@ class DachaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final favProvider = context.watch<FavoriteProvider>();
+    final authProvider = context.watch<AuthProvider>();
     final isFav = favProvider.isFavorite(dacha.id);
 
     return Container(
@@ -95,8 +98,26 @@ class DachaCard extends StatelessWidget {
                   top: 14,
                   right: 14,
                   child: GestureDetector(
-                    onTap: () {
-                      favProvider.toggleFavorite(dacha);
+                    onTap: () async {
+                      if (!authProvider.isAuthenticated) {
+                        AuthModal.show(context);
+                        return;
+                      }
+                      final newFav = await favProvider.toggleFavorite(dacha);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              newFav ? '❤️ Sevimlilar ro\'yxatiga saqlandi!' : 'Dacha sevimlilardan o\'chirildi.',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            duration: const Duration(milliseconds: 1500),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: newFav ? const Color(0xFFE11D48) : AppColors.dark,
+                          ),
+                        );
+                      }
                     },
                     child: Container(
                       width: 36,

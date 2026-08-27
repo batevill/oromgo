@@ -2,12 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/utils/formatters.dart';
-import '../../models/dacha_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/dacha_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../widgets/booking_bottom_bar.dart';
 import '../booking/booking_sheet.dart';
+import '../profile/auth_modal.dart';
 
 class DachaDetailScreen extends StatefulWidget {
   final int dachaId;
@@ -73,7 +73,28 @@ class _DachaDetailScreenState extends State<DachaDetailScreen> {
                       color: isFav ? const Color(0xFFE11D48) : AppColors.dark,
                       size: 20,
                     ),
-                    onPressed: () => favProvider.toggleFavorite(dacha),
+                    onPressed: () async {
+                      final authProvider = context.read<AuthProvider>();
+                      if (!authProvider.isAuthenticated) {
+                        AuthModal.show(context);
+                        return;
+                      }
+                      final newFav = await favProvider.toggleFavorite(dacha);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              newFav ? '❤️ Sevimlilar ro\'yxatiga saqlandi!' : 'Dacha sevimlilardan o\'chirildi.',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            duration: const Duration(milliseconds: 1500),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: newFav ? const Color(0xFFE11D48) : AppColors.dark,
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ),
               ),

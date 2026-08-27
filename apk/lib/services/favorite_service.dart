@@ -7,12 +7,25 @@ class FavoriteService {
 
   Future<List<DachaModel>> getFavorites() async {
     final res = await _api.get(ApiConstants.favorites);
-    final List<dynamic> list = res['favorites'] ?? (res is List ? res : []);
-    return list.map((json) => DachaModel.fromJson(json)).toList();
+    dynamic raw = res;
+    if (res is Map<String, dynamic>) {
+      if (res['favorites'] != null) {
+        if (res['favorites'] is Map && res['favorites']['data'] != null) {
+          raw = res['favorites']['data'];
+        } else if (res['favorites'] is List) {
+          raw = res['favorites'];
+        }
+      }
+    }
+    final List<dynamic> list = raw is List ? raw : [];
+    return list.map((json) => DachaModel.fromJson(json as Map<String, dynamic>)).toList();
   }
 
   Future<bool> toggleFavorite(int dachaId) async {
     final res = await _api.post(ApiConstants.toggleFavorite(dachaId));
-    return res['status'] == 'added';
+    if (res is Map<String, dynamic>) {
+      return res['is_favorite'] == true || res['status'] == 'added';
+    }
+    return false;
   }
 }

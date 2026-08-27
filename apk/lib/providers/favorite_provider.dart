@@ -7,6 +7,7 @@ class FavoriteProvider extends ChangeNotifier {
 
   List<DachaModel> _favorites = [];
   Set<int> _favoriteIds = {};
+  final Set<int> _pendingIds = {};
   bool _isLoading = false;
 
   List<DachaModel> get favorites => _favorites;
@@ -14,6 +15,7 @@ class FavoriteProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   bool isFavorite(int dachaId) => _favoriteIds.contains(dachaId);
+  bool isPending(int dachaId) => _pendingIds.contains(dachaId);
 
   Future<void> fetchFavorites() async {
     _isLoading = true;
@@ -29,28 +31,43 @@ class FavoriteProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> toggleFavorite(DachaModel dacha) async {
+  Future<bool> toggleFavorite(DachaModel dacha) async {
+    if (_pendingIds.contains(dacha.id)) return _favoriteIds.contains(dacha.id);
+
+    _pendingIds.add(dacha.id);
     final exists = _favoriteIds.contains(dacha.id);
+
+    // 1. Optimistic Instant UI Update
     if (exists) {
       _favoriteIds.remove(dacha.id);
       _favorites.removeWhere((d) => d.id == dacha.id);
     } else {
       _favoriteIds.add(dacha.id);
-      _favorites.add(dacha);
+      if (!_favorites.any((d) => d.id == dacha.id)) {
+        _favorites.add(dacha);
+      }
     }
     notifyListeners();
 
+    // 2. Background Sync
     try {
       await _service.toggleFavorite(dacha.id);
+      return !exists;
     } catch (e) {
-      // Revert if failed
+      // Revert on error
       if (exists) {
         _favoriteIds.add(dacha.id);
-        _favorites.add(dacha);
+        if (!_favorites.any((d) => d.id == dacha.id)) {
+          _favorites.add(dacha);
+        }
       } else {
         _favoriteIds.remove(dacha.id);
         _favorites.removeWhere((d) => d.id == dacha.id);
       }
+      notifyListeners();
+      return exists;
+    } finally {
+      _pendingIds.remove(dacha.id);
       notifyListeners();
     }
   }
