@@ -53,17 +53,45 @@ class DachaController extends Controller
             $query->where('capacity', '>=', $request->capacity);
         }
 
-        // Valyuta bo'yicha filtr
-        if ($request->filled('currency')) {
-            $query->where('currency', $request->currency);
-        }
+        // Valyuta va Narx bo'yicha aqlli (Dual-Currency konvertatsiyali) filtr
+        $rate = (float) env('USD_TO_UZS_RATE', 13000); // 1 USD = 13,000 UZS
+        $currency = $request->input('currency');
+        $minPrice = $request->filled('min_price') ? (float) $request->min_price : null;
+        $maxPrice = $request->filled('max_price') ? (float) $request->max_price : null;
 
-        // Ish kunlari narxi bo'yicha filtr (min va max)
-        if ($request->filled('min_price')) {
-            $query->where('weekday_price', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('weekday_price', '<=', $request->max_price);
+        if ($minPrice !== null || $maxPrice !== null) {
+            // Agar valyuta aniq kiritilmagan bo'lsa, kiritilgan narx miqdoridan avtomatik aniqlaymiz (< 5000 bo'lsa USD, aks holda UZS)
+            $selectedCurrency = $currency ?: ($maxPrice && $maxPrice < 5000 ? 'USD' : ($minPrice && $minPrice < 5000 ? 'USD' : 'UZS'));
+
+            $query->where(function ($q) use ($selectedCurrency, $minPrice, $maxPrice, $rate) {
+                if ($selectedCurrency === 'USD') {
+                    // 1. USD dagi dachalar uchun to'g'ridan-to'g'ri USD oraliq
+                    $q->where(function ($sub) use ($minPrice, $maxPrice) {
+                        $sub->where('currency', 'USD');
+                        if ($minPrice !== null) $sub->where('weekday_price', '>=', $minPrice);
+                        if ($maxPrice !== null) $sub->where('weekday_price', '<=', $maxPrice);
+                    })
+                    // 2. UZS dagi dachalar uchun so'mga aylantirilgan ekvivalent oraliq
+                    ->orWhere(function ($sub) use ($minPrice, $maxPrice, $rate) {
+                        $sub->where('currency', 'UZS');
+                        if ($minPrice !== null) $sub->where('weekday_price', '>=', $minPrice * $rate);
+                        if ($maxPrice !== null) $sub->where('weekday_price', '<=', $maxPrice * $rate);
+                    });
+                } else { // UZS
+                    // 1. UZS dagi dachalar uchun to'g'ridan-to'g'ri UZS oraliq
+                    $q->where(function ($sub) use ($minPrice, $maxPrice) {
+                        $sub->where('currency', 'UZS');
+                        if ($minPrice !== null) $sub->where('weekday_price', '>=', $minPrice);
+                        if ($maxPrice !== null) $sub->where('weekday_price', '<=', $maxPrice);
+                    })
+                    // 2. USD dagi dachalar uchun dollarga aylantirilgan ekvivalent oraliq
+                    ->orWhere(function ($sub) use ($minPrice, $maxPrice, $rate) {
+                        $sub->where('currency', 'USD');
+                        if ($minPrice !== null) $sub->where('weekday_price', '>=', $minPrice / $rate);
+                        if ($maxPrice !== null) $sub->where('weekday_price', '<=', $maxPrice / $rate);
+                    });
+                }
+            });
         }
 
         // Qulayliklar (Amenities) bo'yicha ko'p tanlovli (Multiple) filtr
