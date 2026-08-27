@@ -1,10 +1,11 @@
 class ApiConstants {
-  // Use localhost or 10.0.2.2 for Android Emulator, or custom server host
-  static const String baseUrl = 'http://10.0.2.2:8000/api'; // Android Emulator default
-  static const String localhostUrl = 'http://127.0.0.1:8000/api';
+  // Wi-Fi Local Network URL for Phone & Laptop connection
+  static const String baseUrl = 'http://172.16.6.102:10017/api';
+  static const String localhostUrl = 'http://127.0.0.1:10017/api';
 
   // Dachas
   static const String dachas = '/dachas';
+  static const String locations = '/locations';
   static String dachaDetail(int id) => '/dachas/$id';
   static String dachaCalendar(int id) => '/dachas/$id/calendar';
   static String calculatePrice(int id) => '/dachas/$id/calculate-price';

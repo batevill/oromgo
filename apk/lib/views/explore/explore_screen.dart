@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/network/api_client.dart';
 import '../../providers/dacha_provider.dart';
 import '../../widgets/category_pill.dart';
 import '../../widgets/dacha_card.dart';
+import '../../widgets/location_filter_modal.dart';
 import '../../widgets/search_bar_widget.dart';
+import '../../widgets/server_config_dialog.dart';
 import 'dacha_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -22,52 +25,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
       final provider = context.read<DachaProvider>();
       provider.fetchDachas();
       provider.fetchAmenities();
+      provider.fetchLocations();
     });
   }
 
   void _showFilterModal() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) {
-        final dachaProvider = context.read<DachaProvider>();
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Hududni tanlang', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.dark)),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Barcha hududlar'),
-                trailing: dachaProvider.selectedRegion == null ? const Icon(Icons.check, color: AppColors.primary) : null,
-                onTap: () {
-                  dachaProvider.setRegion(null);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Toshkent viloyati (Chorvoq/Chimyon)'),
-                trailing: dachaProvider.selectedRegion == 'Toshkent viloyati' ? const Icon(Icons.check, color: AppColors.primary) : null,
-                onTap: () {
-                  dachaProvider.setRegion('Toshkent viloyati');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Jizzax viloyati (Zomin)'),
-                trailing: dachaProvider.selectedRegion == 'Jizzax viloyati' ? const Icon(Icons.check, color: AppColors.primary) : null,
-                onTap: () {
-                  dachaProvider.setRegion('Jizzax viloyati');
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    LocationFilterModal.show(context);
   }
 
   @override
@@ -90,6 +53,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
             const Text('Oromgo', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: AppColors.dark)),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.dns_outlined, color: AppColors.primary, size: 20),
+            ),
+            tooltip: 'Server Sozlamalari (API URL)',
+            onPressed: () => ServerConfigDialog.show(context),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => dachaProvider.fetchDachas(),
@@ -106,10 +84,44 @@ class _ExploreScreenState extends State<ExploreScreen> {
               SearchBarWidget(
                 onTapFilter: _showFilterModal,
                 onSearch: (q) {
-                  // search query
+                  dachaProvider.setSearchQuery(q.trim().isEmpty ? null : q.trim());
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // Active Location Filter Badge / Indicator
+              if (dachaProvider.hasActiveLocationFilter) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.place_rounded, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          dachaProvider.activeLocationLabel,
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => dachaProvider.clearFilters(),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Icon(Icons.cancel_rounded, size: 18, color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Category Pills Carousel
               SingleChildScrollView(
@@ -173,7 +185,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
               const SizedBox(height: 16),
 
-              // Dachas List
+              // Dachas List State Handling
               if (dachaProvider.isLoading)
                 const Center(
                   child: Padding(
@@ -181,10 +193,61 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: CircularProgressIndicator(color: AppColors.primary),
                   ),
                 )
+              else if (dachaProvider.errorMessage != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.cloud_off_rounded, size: 50, color: AppColors.error),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Serverga ulanishda xatolik',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.dark),
+                        ),
+                        const SizedBox(height: 6),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            dachaProvider.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Hozirgi server: ${ApiClient().baseUrl}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => ServerConfigDialog.show(context),
+                              icon: const Icon(Icons.settings, size: 16),
+                              label: const Text('Server sozlamasi'),
+                            ),
+                            const SizedBox(width: 10),
+                            ElevatedButton.icon(
+                              onPressed: () => dachaProvider.fetchDachas(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Qayta urinish'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                )
               else if (dachaProvider.dachas.isEmpty)
                 Center(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 60),
+                    padding: const EdgeInsets.symmetric(vertical: 50),
                     child: Column(
                       children: [
                         const Text('🏜️', style: TextStyle(fontSize: 48)),
@@ -194,7 +257,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.dark),
                         ),
                         const SizedBox(height: 4),
-                        const Text('Filtrlarni o\'zgartirib qayta urinib ko\'ring.', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                        const Text(
+                          'Filtrlarni o\'zgartirib yoki tozalab qayta urinib ko\'ring.',
+                          style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                        ),
+                        if (dachaProvider.hasActiveLocationFilter) ...[
+                          const SizedBox(height: 14),
+                          OutlinedButton.icon(
+                            onPressed: () => dachaProvider.clearFilters(),
+                            icon: const Icon(Icons.clear_all_rounded, size: 18),
+                            label: const Text('Filtrlarni tozalash'),
+                          ),
+                        ],
                       ],
                     ),
                   ),

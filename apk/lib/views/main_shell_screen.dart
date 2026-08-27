@@ -9,6 +9,9 @@ import 'favorites/favorites_screen.dart';
 import 'notifications/notifications_screen.dart';
 import 'profile/profile_screen.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/server_config_dialog.dart';
+
 class MainShellScreen extends StatefulWidget {
   const MainShellScreen({super.key});
 
@@ -30,9 +33,19 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      context.read<AuthProvider>().checkAuth();
-      context.read<NotificationProvider>().fetchNotifications();
+    Future.microtask(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final hasConfigured = prefs.getBool('has_configured_server') ?? false;
+
+      if (!hasConfigured && mounted) {
+        // Show server URL config modal on first run
+        await ServerConfigDialog.show(context, isFirstLaunch: true);
+      }
+
+      if (mounted) {
+        context.read<AuthProvider>().checkAuth();
+        context.read<NotificationProvider>().fetchNotifications();
+      }
     });
   }
 

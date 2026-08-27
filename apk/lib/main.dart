@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
@@ -23,6 +24,9 @@ void main() async {
 
   // Initialize Uzbek locale date symbols for formatting
   await initializeDateFormatting('uz', null);
+
+  // Initialize API client settings
+  await ApiClient().init();
 
   runApp(const OromgoApp());
 }

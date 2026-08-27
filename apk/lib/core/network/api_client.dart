@@ -10,8 +10,53 @@ class ApiClient {
 
   String _baseUrl = ApiConstants.baseUrl;
 
-  void setBaseUrl(String url) {
-    _baseUrl = url;
+  String get baseUrl => _baseUrl;
+
+  static const String _storageKey = 'api_custom_base_url';
+
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUrl = prefs.getString(_storageKey);
+    if (savedUrl != null && savedUrl.trim().isNotEmpty) {
+      _baseUrl = _normalizeUrl(savedUrl);
+    }
+  }
+
+  Future<void> setBaseUrl(String url) async {
+    _baseUrl = _normalizeUrl(url);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, _baseUrl);
+  }
+
+  Future<void> resetBaseUrl() async {
+    _baseUrl = ApiConstants.baseUrl;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+  }
+
+  String _normalizeUrl(String url) {
+    var trimmed = url.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      trimmed = 'http://$trimmed';
+    }
+    while (trimmed.endsWith('/')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1);
+    }
+    if (!trimmed.endsWith('/api')) {
+      trimmed = '$trimmed/api';
+    }
+    return trimmed;
+  }
+
+  Future<bool> testConnection(String url) async {
+    try {
+      final normalized = _normalizeUrl(url);
+      final uri = Uri.parse('$normalized/amenities');
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      return response.statusCode >= 200 && response.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<String?> getToken() async {

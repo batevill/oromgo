@@ -26,6 +26,7 @@ Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle']);
 // Ochiq (Public) marshrutlar
 // ==========================================
 Route::get('/dachas', [DachaController::class, 'index']);
+Route::get('/locations', [DachaController::class, 'locations']);
 Route::get('/dachas/{id}/calendar', [BookingController::class, 'calendar']);
 Route::post('/dachas/{id}/calculate-price', [BookingController::class, 'calculatePrice']);
 Route::get('/dachas/{id}/reviews', [ReviewController::class, 'index']);

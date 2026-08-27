@@ -31,6 +31,16 @@ class Dacha extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function regionModel()
+    {
+        return $this->belongsTo(Region::class, 'region_id');
+    }
+
+    public function districtModel()
+    {
+        return $this->belongsTo(District::class, 'district_id');
+    }
+
     public function media()
     {
         return $this->hasMany(DachaMedia::class);

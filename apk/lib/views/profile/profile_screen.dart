@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/server_config_dialog.dart';
 import '../owner/owner_dashboard_screen.dart';
 import 'auth_modal.dart';
 
@@ -140,6 +141,14 @@ class ProfileScreen extends StatelessWidget {
               ),
 
               _buildMenuItem(
+                icon: Icons.dns_rounded,
+                title: 'Server Sozlamalari (API URL)',
+                subtitle: 'Lokal IP yoki backend server manzilini o\'zgartirish',
+                iconColor: AppColors.primary,
+                onTap: () => ServerConfigDialog.show(context),
+              ),
+
+              _buildMenuItem(
                 icon: Icons.logout_rounded,
                 title: 'Chiqish',
                 subtitle: 'Tizimdan chiqish',
@@ -152,6 +161,14 @@ class ProfileScreen extends StatelessWidget {
                     );
                   }
                 },
+              ),
+            ] else ...[
+              _buildMenuItem(
+                icon: Icons.dns_rounded,
+                title: 'Server Sozlamalari (API URL)',
+                subtitle: 'Lokal IP yoki backend server manzilini o\'zgartirish',
+                iconColor: AppColors.primary,
+                onTap: () => ServerConfigDialog.show(context),
               ),
             ],
 
