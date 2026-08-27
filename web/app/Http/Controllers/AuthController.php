@@ -73,10 +73,14 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'message' => 'Muvaffaqiyatli tizimga kirdingiz',
-            'token' => $token,
-            'user' => $user
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Muvaffaqiyatli tizimga kirdingiz',
+                'token' => $token,
+                'user' => $user
+            ]);
+        }
+
+        return redirect('/?auth_token=' . urlencode($token) . '&user_id=' . $user->id . '&user_name=' . urlencode($user->name) . '&user_role=' . $user->role);
     }
 }

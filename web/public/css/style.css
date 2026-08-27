@@ -1179,6 +1179,13 @@ body {
   flex-direction: column;
   gap: 0.65rem;
   position: relative;
+  cursor: pointer;
+}
+
+.notif-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 6px 20px -4px rgba(37, 99, 235, 0.12);
+  transform: translateY(-2px);
 }
 
 .notif-card.unread {

@@ -22,6 +22,7 @@ const state = {
   unreadNotificationsCount: 0,
   hasTelegramLinked: false,
   notifFilter: 'all',
+  pendingDachaId: null,
   token: localStorage.getItem('oromgo_token') || '',
   user: JSON.parse(localStorage.getItem('oromgo_user') || 'null'),
 };
@@ -30,6 +31,21 @@ const state = {
 // INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Check if redirected from OAuth (Telegram/Google)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('auth_token')) {
+    state.token = urlParams.get('auth_token');
+    state.user = {
+      id: urlParams.get('user_id'),
+      name: urlParams.get('user_name') || 'Foydalanuvchi',
+      role: urlParams.get('user_role') || 'user'
+    };
+    localStorage.setItem('oromgo_token', state.token);
+    localStorage.setItem('oromgo_user', JSON.stringify(state.user));
+    window.history.replaceState({}, document.title, window.location.pathname);
+    showToast(`Xush kelibsiz, ${state.user.name}!`, 'success');
+  }
+
   initApp();
   setupEventListeners();
   updateAuthUI();
@@ -278,6 +294,12 @@ function renderDachas(dachas) {
               <span class="price-label">Dam olish:</span>
               <div class="price-val" style="color: var(--accent);">${weekendPrice.toLocaleString()} <span>${currencySymbol}/kun</span></div>
             </div>
+          </div>
+          <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">📅 Bandlik taqvimi</span>
+            <button class="btn btn-primary" style="padding: 0.35rem 0.85rem; font-size: 0.85rem; font-weight: 700; border-radius: var(--radius-sm);" onclick="event.stopPropagation(); openDachaDetail(${dacha.id});">
+              Batafsil ➔
+            </button>
           </div>
         </div>
       </div>
@@ -568,8 +590,10 @@ async function showFavoritesOnly(btn) {
 // ==========================================
 
 async function openDachaDetail(id) {
+  // If user is not logged in, prompt authentication and remember which dacha they wanted to view
   if (!state.token) {
-    openAuthModal('Dacha haqida batafsil ma\'lumot, narxlar, band kunlar taqvimi va dacha egasining kontaktlarini ko\'rish uchun iltimos, avval ro\'yxatdan o\'ting yoki tizimga kiring.');
+    state.pendingDachaId = id;
+    openAuthModal('Dacha haqida to\'liq ma\'lumot, fotosuratlar, band kunlar taqvimi va dacha egasining kontaktlarini ko\'rish uchun iltimos, avval tizimga kiring.');
     return;
   }
 
@@ -587,22 +611,34 @@ async function openDachaDetail(id) {
 
   try {
     const headers = {
-      'Authorization': `Bearer ${state.token}`
+      'Authorization': `Bearer ${state.token}`,
+      'Accept': 'application/json'
     };
 
     const [dachaRes, reviewsRes] = await Promise.all([
       fetch(`${API_BASE}/dachas/${id}`, { credentials: 'omit', headers }),
-      fetch(`${API_BASE}/dachas/${id}/reviews`)
+      fetch(`${API_BASE}/dachas/${id}/reviews`, { headers: { 'Accept': 'application/json' } })
     ]);
     
+    // In case token is expired or invalid
     if (dachaRes.status === 401) {
+      state.token = '';
+      state.user = null;
+      localStorage.removeItem('oromgo_token');
+      localStorage.removeItem('oromgo_user');
+      updateAuthUI();
       closeModal('detailModal');
-      openAuthModal('Dacha haqida batafsil ma\'lumot va uning to\'liq kontaktlarini ko\'rish uchun iltimos, tizimga kiring.');
+      state.pendingDachaId = id;
+      openAuthModal('Sessiyangiz muddati tugagan. Dacha ma\'lumotlarini ko\'rish uchun iltimos, tizimga qayta kiring.');
       return;
     }
 
+    if (!dachaRes.ok) {
+      throw new Error(`Server xatosi: ${dachaRes.status}`);
+    }
+
     const dacha = await dachaRes.json();
-    const reviewsData = await reviewsRes.json();
+    const reviewsData = reviewsRes.ok ? await reviewsRes.json() : { reviews: [], avg_rating: 5.0, total_reviews: 0 };
 
     state.currentDacha = dacha;
     state.currentReviews = reviewsData.reviews || [];
@@ -610,7 +646,18 @@ async function openDachaDetail(id) {
     loadDachaCalendar(id);
     renderDachaDetail(dacha, reviewsData);
   } catch (err) {
-    content.innerHTML = `<p style="padding: 2rem; color: red;">Xatolik yuz berdi.</p>`;
+    console.error('Dacha tafsilotlarini yuklashda xatolik:', err);
+    content.innerHTML = `
+      <div style="text-align: center; padding: 3rem 1rem;">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">⚠️</div>
+        <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Dacha ma'lumotlarini yuklashda xatolik yuz berdi</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">Qaytadan urinib ko'ring yoki tizimga qayta kiring.</p>
+        <div style="display: flex; justify-content: center; gap: 0.75rem;">
+          <button class="btn btn-outline" onclick="closeModal('detailModal')">Yopish</button>
+          <button class="btn btn-primary" onclick="openDachaDetail(${id})">Qayta yuklash</button>
+        </div>
+      </div>
+    `;
   }
 }
 
@@ -973,10 +1020,28 @@ function renderAmenitiesForOwnerForm(amenities) {
   `).join('');
 }
 
+function openOwnerModal() {
+  if (!state.token) {
+    state.pendingAction = 'open_owner_modal';
+    openAuthModal('Dacha e\'lonini joylash uchun avval dacha egasi sifatida tizimga kiring.');
+    return;
+  }
+
+  if (state.user && state.user.role !== 'owner' && state.user.role !== 'admin' && state.user.role !== 'super_admin') {
+    state.pendingAction = 'open_owner_modal';
+    openAuthModal('E\'lon joylash uchun dacha egasi (owner) hisobi kerak. Iltimos, dacha egasi sifatida kiring yoki demo orqali sinab ko\'ring.');
+    return;
+  }
+
+  populateRegionSelects();
+  openModal('ownerModal');
+}
+
 async function handleCreateDacha(e) {
   e.preventDefault();
 
   if (!state.token) {
+    state.pendingAction = 'open_owner_modal';
     openAuthModal('Dacha e\'lonini joylash uchun avval dacha egasi sifatida ro\'yxatdan o\'ting.');
     return;
   }
@@ -985,6 +1050,7 @@ async function handleCreateDacha(e) {
   const formData = new FormData(form);
 
   const btn = form.querySelector('button[type="submit"]');
+  const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.textContent = 'Yuklanmoqda...';
 
@@ -992,7 +1058,8 @@ async function handleCreateDacha(e) {
     const res = await fetch(`${API_BASE}/owner/dachas`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${state.token}`
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
       },
       body: formData
     });
@@ -1000,9 +1067,11 @@ async function handleCreateDacha(e) {
     const result = await res.json();
 
     if (!res.ok) {
-      showToast(result.message || 'Xatolik yuz berdi', 'error');
-      btn.disabled = false;
-      btn.textContent = 'E\'lonni joylash';
+      let errMsg = result.message || 'Xatolik yuz berdi';
+      if (result.errors) {
+        errMsg = Object.values(result.errors).flat().join('<br>');
+      }
+      showToast(errMsg, 'error');
       return;
     }
 
@@ -1011,10 +1080,11 @@ async function handleCreateDacha(e) {
     closeModal('ownerModal');
     loadDachas();
   } catch (err) {
-    showToast('Fayllarni yuklashda xatolik', 'error');
+    console.error('handleCreateDacha error:', err);
+    showToast('Fayllarni yuklashda yoki server bilan bog\'lanishda xatolik', 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'E\'lonni joylash';
+    btn.innerHTML = originalText;
   }
 }
 
@@ -1064,6 +1134,21 @@ async function loginAsDemo(role = 'owner') {
       await loadFavorites();
       renderDachas(state.dachas);
       loadNotifications(true);
+
+      // Agar avval biror dachani batafsil ko'rmoqchi bo'lgan bo'lsa, o'shani darhol ochib beramiz!
+      if (state.pendingDachaId) {
+        const targetId = state.pendingDachaId;
+        state.pendingDachaId = null;
+        openDachaDetail(targetId);
+      }
+
+      // Agar e'lon berish tugmasini bosgan bo'lsa, e'lon berish modalini ochamiz
+      if (state.pendingAction === 'open_owner_modal') {
+        state.pendingAction = null;
+        if (state.user && (state.user.role === 'owner' || state.user.role === 'admin' || state.user.role === 'super_admin')) {
+          openOwnerModal();
+        }
+      }
     } else {
       showToast('Kirishda xatolik yuz berdi', 'error');
     }
@@ -1243,6 +1328,7 @@ function renderNotificationsList() {
     const isUnread = !n.is_read;
     const data = n.data || {};
     const bookingId = n.booking_id || data.booking_id;
+    const dachaId = data.dacha_id || n.booking?.dacha_id || n.booking?.dacha?.id;
     const timeAgo = formatTimeAgo(n.created_at);
 
     let typeBadgeLabel = 'Xabar';
@@ -1266,7 +1352,7 @@ function renderNotificationsList() {
     const showOwnerActions = isOwnerOrAdmin && n.type === 'booking_created' && bookingId && data.status === 'pending';
 
     return `
-      <div class="notif-card ${isUnread ? 'unread' : ''}" onclick="markNotificationAsRead(${n.id})">
+      <div class="notif-card ${isUnread ? 'unread' : ''}" onclick="handleNotificationClick(${n.id}, ${dachaId || 'null'})" title="${dachaId ? 'Dachani batafsil ko\'rish uchun bosing' : ''}">
         <div class="notif-card-header">
           <div class="notif-title-row">
             <span>${icon}</span>
@@ -1281,9 +1367,12 @@ function renderNotificationsList() {
         ${data.dacha_name || data.start_date ? `
           <div class="notif-details-grid">
             ${data.dacha_name ? `
-              <div class="notif-detail-item">
-                <span class="notif-detail-label">🏡 Dacha:</span>
-                <span class="notif-detail-val">${escapeHtml(data.dacha_name)}</span>
+              <div class="notif-detail-item" style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; background: #eff6ff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #bfdbfe;">
+                <div>
+                  <span class="notif-detail-label" style="color: #1e40af;">🏡 Dacha:</span>
+                  <span class="notif-detail-val" style="color: #1e3a8a; font-weight: 700;">${escapeHtml(data.dacha_name)}</span>
+                </div>
+                ${dachaId ? `<span style="font-size: 0.75rem; font-weight: 700; color: #2563eb;">Batafsil ko'rish ➔</span>` : ''}
               </div>
             ` : ''}
             ${data.guest_name ? `
@@ -1307,7 +1396,7 @@ function renderNotificationsList() {
             ${data.total_price ? `
               <div class="notif-detail-item">
                 <span class="notif-detail-label">💰 Summa:</span>
-                <span class="notif-detail-val" style="color: var(--primary);">${parseFloat(data.total_price).toLocaleString()} ${data.currency || 'USD'}</span>
+                <span class="notif-detail-val" style="color: var(--primary); font-weight: 700;">${parseFloat(data.total_price).toLocaleString()} ${data.currency || 'USD'}</span>
               </div>
             ` : ''}
             ${data.notes ? `
@@ -1327,11 +1416,33 @@ function renderNotificationsList() {
             <button class="btn-reject-sm" onclick="handleOwnerNotificationDecision(${bookingId}, 'reject', ${n.id})">
               <span>❌</span> Rad etish
             </button>
+            ${dachaId ? `
+              <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-left: auto;" onclick="closeModal('notificationModal'); openDachaDetail(${dachaId});">
+                🏡 Dachani ko'rish
+              </button>
+            ` : ''}
           </div>
-        ` : ''}
+        ` : (dachaId ? `
+          <div style="display: flex; justify-content: flex-end; margin-top: 0.25rem;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 0.25rem;">
+              Dacha sahifasini ochish ➔
+            </span>
+          </div>
+        ` : '')}
       </div>
     `;
   }).join('');
+}
+
+async function handleNotificationClick(notifId, dachaId) {
+  // O'qilgan deb belgilash
+  markNotificationAsRead(notifId);
+
+  // Agar bildirishnoma biror dachaga biriktirilgan bo'lsa, bildirishnomalar oynasini yopib, dachaning batafsil ma'lumotlarini ochamiz
+  if (dachaId) {
+    closeModal('notificationModal');
+    openDachaDetail(dachaId);
+  }
 }
 
 async function markNotificationAsRead(id) {
