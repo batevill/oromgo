@@ -64,10 +64,14 @@
       <div class="search-field">
         <label for="searchRegion">Viloyat / Hudud</label>
         <select id="searchRegion">
-          <option value="">Barcha hududlar</option>
-          <option value="Toshkent viloyati">Toshkent viloyati (Chorvoq/Chimyon)</option>
-          <option value="Jizzax viloyati">Jizzax viloyati (Zomin)</option>
-          <option value="Samarqand viloyati">Samarqand viloyati</option>
+          <option value="">Barcha viloyatlar</option>
+        </select>
+      </div>
+
+      <div class="search-field">
+        <label for="searchDistrict">Tuman / Shahar</label>
+        <select id="searchDistrict">
+          <option value="">Barcha tumanlar</option>
         </select>
       </div>
 
@@ -179,11 +183,15 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <div class="form-group">
             <label>Viloyat *</label>
-            <input type="text" name="region" class="form-control" value="Toshkent viloyati" required />
+            <select name="region" id="ownerRegion" class="form-control" required>
+              <option value="">Viloyatni tanlang</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Tuman *</label>
-            <input type="text" name="district" class="form-control" placeholder="Bo'stonliq tumani" required />
+            <select name="district" id="ownerDistrict" class="form-control" required>
+              <option value="">Tumanni tanlang</option>
+            </select>
           </div>
         </div>
 

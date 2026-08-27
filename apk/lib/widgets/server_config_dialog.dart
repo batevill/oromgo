@@ -204,6 +204,11 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
                   onPressed: () => _usePreset('http://172.16.6.102:10017/api'),
                 ),
                 ActionChip(
+                  label: const Text('LAN (172.16.129.75:10017)', style: TextStyle(fontSize: 11)),
+                  backgroundColor: AppColors.bgSurface,
+                  onPressed: () => _usePreset('http://172.16.129.75:10017/api'),
+                ),
+                ActionChip(
                   label: const Text('Emulator (10.0.2.2:10017)', style: TextStyle(fontSize: 11)),
                   backgroundColor: AppColors.bgSurface,
                   onPressed: () => _usePreset('http://10.0.2.2:10017/api'),

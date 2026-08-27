@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/api_client.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/dacha_provider.dart';
 import '../../widgets/category_pill.dart';
 import '../../widgets/dacha_card.dart';
 import '../../widgets/location_filter_modal.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/server_config_dialog.dart';
+import '../profile/auth_modal.dart';
 import 'dacha_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -283,6 +285,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     return DachaCard(
                       dacha: dacha,
                       onTap: () {
+                        final auth = context.read<AuthProvider>();
+                        if (!auth.isAuthenticated) {
+                          AuthModal.show(
+                            context,
+                            notice: 'Dacha haqida batafsil ma\'lumot, narxlar va dacha egasining kontaktlarini ko\'rish uchun iltimos, avval tizimga kiring.',
+                          );
+                          return;
+                        }
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(

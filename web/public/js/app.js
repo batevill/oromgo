@@ -7,6 +7,7 @@ const API_BASE = '/api';
 const state = {
   dachas: [],
   amenities: [],
+  locations: {},
   activeFilter: 'all',
   currentDacha: null,
   currentReviews: [],
@@ -41,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
-  await Promise.all([loadAmenities(), loadDachas(), loadFavorites(), loadNotifications()]);
+  await Promise.all([loadLocations(), loadAmenities(), loadDachas(), loadFavorites(), loadNotifications()]);
 }
 
 function setupEventListeners() {
@@ -50,18 +51,35 @@ function setupEventListeners() {
   if (searchForm) {
     searchForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const region = document.getElementById('searchRegion').value;
-      const capacity = document.getElementById('searchCapacity').value;
-      const currency = document.getElementById('searchCurrency').value;
-      const maxPrice = document.getElementById('searchPrice').value;
+      const region = document.getElementById('searchRegion')?.value;
+      const district = document.getElementById('searchDistrict')?.value;
+      const capacity = document.getElementById('searchCapacity')?.value;
+      const currency = document.getElementById('searchCurrency')?.value;
+      const maxPrice = document.getElementById('searchPrice')?.value;
 
       const params = {};
       if (region) params.region = region;
+      if (district) params.district = district;
       if (capacity) params.capacity = capacity;
       if (currency) params.currency = currency;
       if (maxPrice) params.max_price = maxPrice;
 
       loadDachas(params);
+    });
+  }
+
+  // Region dropdown change listeners
+  const searchRegion = document.getElementById('searchRegion');
+  if (searchRegion) {
+    searchRegion.addEventListener('change', () => {
+      populateDistrictsForSelect('searchDistrict', searchRegion.value, 'Barcha tumanlar');
+    });
+  }
+
+  const ownerRegion = document.getElementById('ownerRegion');
+  if (ownerRegion) {
+    ownerRegion.addEventListener('change', () => {
+      populateDistrictsForSelect('ownerDistrict', ownerRegion.value, 'Tumanni tanlang');
     });
   }
 
@@ -75,6 +93,50 @@ function setupEventListeners() {
 // ==========================================
 // API CALLS & RENDERING
 // ==========================================
+
+async function loadLocations() {
+  try {
+    const res = await fetch(`${API_BASE}/locations`);
+    if (!res.ok) throw new Error('Hududlar ma\'lumotlarini yuklab bo\'lmadi');
+    const data = await res.json();
+    state.locations = data || {};
+    populateRegionSelects();
+  } catch (err) {
+    console.error('Locations error:', err);
+  }
+}
+
+function populateRegionSelects() {
+  const regions = Object.keys(state.locations);
+
+  // Search Region select
+  const searchRegSelect = document.getElementById('searchRegion');
+  if (searchRegSelect) {
+    searchRegSelect.innerHTML = '<option value="">Barcha viloyatlar</option>' +
+      regions.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+
+  // Owner Form Region select
+  const ownerRegSelect = document.getElementById('ownerRegion');
+  if (ownerRegSelect) {
+    ownerRegSelect.innerHTML = '<option value="">Viloyatni tanlang</option>' +
+      regions.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+}
+
+function populateDistrictsForSelect(selectId, selectedRegion, placeholder = 'Barcha tumanlar') {
+  const selectEl = document.getElementById(selectId);
+  if (!selectEl) return;
+
+  if (!selectedRegion || !state.locations[selectedRegion]) {
+    selectEl.innerHTML = `<option value="">${placeholder}</option>`;
+    return;
+  }
+
+  const districts = Object.keys(state.locations[selectedRegion] || {});
+  selectEl.innerHTML = `<option value="">${placeholder}</option>` +
+    districts.map(d => `<option value="${d}">${d}</option>`).join('');
+}
 
 async function loadAmenities() {
   try {
@@ -399,6 +461,11 @@ async function showFavoritesOnly(btn) {
 // ==========================================
 
 async function openDachaDetail(id) {
+  if (!state.token) {
+    openAuthModal('Dacha haqida batafsil ma\'lumot, narxlar, band kunlar taqvimi va dacha egasining kontaktlarini ko\'rish uchun iltimos, avval ro\'yxatdan o\'ting yoki tizimga kiring.');
+    return;
+  }
+
   const modal = document.getElementById('detailModal');
   const content = document.getElementById('detailModalContent');
   if (!modal || !content) return;
@@ -412,10 +479,9 @@ async function openDachaDetail(id) {
   `;
 
   try {
-    const headers = {};
-    if (state.token) {
-      headers['Authorization'] = `Bearer ${state.token}`;
-    }
+    const headers = {
+      'Authorization': `Bearer ${state.token}`
+    };
 
     const [dachaRes, reviewsRes] = await Promise.all([
       fetch(`${API_BASE}/dachas/${id}`, { credentials: 'omit', headers }),

@@ -52,14 +52,34 @@ class OwnerDachaController extends Controller
         ]);
 
         return DB::transaction(function () use ($request, $validated) {
+            $regionModel = \App\Models\Region::where('name', $validated['region'])
+                ->orWhere('name_uz', $validated['region'])
+                ->orWhere('name_oz', $validated['region'])
+                ->orWhere('name_ru', $validated['region'])
+                ->first();
+
+            $districtModel = null;
+            if ($regionModel) {
+                $districtModel = \App\Models\District::where('region_id', $regionModel->id)
+                    ->where(function($q) use ($validated) {
+                        $q->where('name', $validated['district'])
+                          ->orWhere('name_uz', $validated['district'])
+                          ->orWhere('name_oz', $validated['district'])
+                          ->orWhere('name_ru', $validated['district']);
+                    })
+                    ->first();
+            }
+
             $dacha = Dacha::create([
                 'user_id' => $request->user()->id,
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'capacity' => $validated['capacity'],
                 'rooms_count' => $validated['rooms_count'],
-                'region' => $validated['region'],
-                'district' => $validated['district'],
+                'region_id' => $regionModel?->id,
+                'district_id' => $districtModel?->id,
+                'region' => $regionModel?->name_uz ?? $validated['region'],
+                'district' => $districtModel?->name_uz ?? $validated['district'],
                 'mahalla' => $validated['mahalla'] ?? null,
                 'address' => $validated['address'] ?? null,
                 'latitude' => $validated['latitude'] ?? null,
@@ -145,12 +165,35 @@ class OwnerDachaController extends Controller
         ]);
 
         return DB::transaction(function () use ($request, $dacha, $validated) {
-            $dacha->update($request->only([
+            $data = $request->only([
                 'name', 'description', 'capacity', 'rooms_count',
                 'region', 'district', 'mahalla', 'address',
                 'latitude', 'longitude', 'weekday_price', 'weekend_price',
                 'currency', 'status'
-            ]));
+            ]);
+
+            if (!empty($data['region'])) {
+                $reg = \App\Models\Region::where('name', $data['region'])
+                    ->orWhere('name_uz', $data['region'])
+                    ->first();
+                if ($reg) {
+                    $data['region_id'] = $reg->id;
+                    $data['region'] = $reg->name_uz;
+                    if (!empty($data['district'])) {
+                        $dist = \App\Models\District::where('region_id', $reg->id)
+                            ->where(function($q) use ($data) {
+                                $q->where('name', $data['district'])
+                                  ->orWhere('name_uz', $data['district']);
+                            })->first();
+                        if ($dist) {
+                            $data['district_id'] = $dist->id;
+                            $data['district'] = $dist->name_uz;
+                        }
+                    }
+                }
+            }
+
+            $dacha->update($data);
 
             if ($request->has('amenities')) {
                 $dacha->amenities()->sync($request->amenities ?? []);

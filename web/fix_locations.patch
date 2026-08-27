@@ -1,0 +1,24 @@
+--- a/resources/views/welcome.blade.php
++++ b/resources/views/welcome.blade.php
+@@ -62,11 +62,13 @@
+     <!-- Search Card -->
+     <form id="searchForm" class="search-card">
+       <div class="search-field">
+         <label for="searchRegion">Viloyat / Hudud</label>
+         <select id="searchRegion">
+           <option value="">Barcha hududlar</option>
+-          <option value="Toshkent viloyati">Toshkent viloyati (Chorvoq/Chimyon)</option>
+-          <option value="Jizzax viloyati">Jizzax viloyati (Zomin)</option>
+-          <option value="Samarqand viloyati">Samarqand viloyati</option>
+         </select>
+       </div>
+ 
++      <div class="search-field">
++        <label for="searchDistrict">Tuman / Shahar</label>
++        <select id="searchDistrict" disabled>
++          <option value="">Barcha tumanlar</option>
++        </select>
++      </div>
++
+       <div class="search-field">
+         <label for="searchCapacity">Mehmonlar soni</label>
