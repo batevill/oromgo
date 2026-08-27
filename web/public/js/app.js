@@ -13,6 +13,7 @@ const state = {
   currentReviews: [],
   bookedDates: [],
   favoriteIds: [],
+  pendingFavorites: new Set(),
   selectedRating: 5,
   isMapView: false,
   mapInstance: null,
@@ -42,7 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
-  await Promise.all([loadLocations(), loadAmenities(), loadDachas(), loadFavorites(), loadNotifications()]);
+  await Promise.all([loadLocations(), loadAmenities(), loadFavorites(), loadNotifications()]);
+  await loadDachas();
 }
 
 function setupEventListeners() {
@@ -157,14 +159,17 @@ async function loadFavorites() {
   }
   try {
     const res = await fetch(`${API_BASE}/favorites`, {
-      headers: { 'Authorization': `Bearer ${state.token}` }
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
     });
     if (res.ok) {
       const data = await res.json();
-      state.favoriteIds = data.favorite_ids || [];
+      state.favoriteIds = (data.favorite_ids || []).map(id => Number(id));
     }
   } catch (err) {
-    console.error(err);
+    console.error('Favorites error:', err);
   }
 }
 
@@ -195,34 +200,53 @@ async function loadDachas(params = {}) {
 function renderDachas(dachas) {
   const grid = document.getElementById('dachaGrid');
   const countEl = document.getElementById('resultsCount');
-  if (countEl) countEl.textContent = `${dachas.length} ta dacha topildi`;
+  const titleEl = document.getElementById('sectionTitle');
+
+  if (state.activeFilter === 'favorites') {
+    if (titleEl) titleEl.textContent = '❤️ Sevimli dachalarim';
+    if (countEl) countEl.textContent = `${dachas.length} ta saqlangan dacha`;
+  } else {
+    if (titleEl) titleEl.textContent = 'Tavsiya etiladigan dachalar';
+    if (countEl) countEl.textContent = `${dachas.length} ta dacha topildi`;
+  }
 
   if (!dachas.length) {
-    grid.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 4rem 1rem; background: white; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
-        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏡</div>
-        <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Mos dacha topilmadi</h3>
-        <p style="color: var(--text-muted); font-size: 0.95rem;">Qidiruv parametrlarini o'zgartirib ko'ring yoki barcha dachalarni ko'ring.</p>
-        <button class="btn btn-outline" style="margin-top: 1.25rem;" onclick="resetSearch()">Filtrlarni tozalash</button>
-      </div>
-    `;
+    if (state.activeFilter === 'favorites') {
+      grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 4rem 1rem; background: white; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem;">💔</div>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Hozircha sevimlilar yo'q</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Yoqqan dachalar ustidagi yurakcha (❤️) tugmasini bosib saqlang.</p>
+          <button class="btn btn-outline" style="margin-top: 1.25rem;" onclick="resetSearch()">Barcha dachalarni ko'rish</button>
+        </div>
+      `;
+    } else {
+      grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 4rem 1rem; background: white; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏡</div>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Mos dacha topilmadi</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Qidiruv parametrlarini o'zgartirib ko'ring yoki barcha dachalarni ko'ring.</p>
+          <button class="btn btn-outline" style="margin-top: 1.25rem;" onclick="resetSearch()">Filtrlarni tozalash</button>
+        </div>
+      `;
+    }
     return;
   }
 
   grid.innerHTML = dachas.map(dacha => {
     const firstImg = dacha.media && dacha.media.length > 0 
       ? dacha.media[0].url 
-      : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&auto=format&fit=crop&q=80';
+      : '/storage/dachas/images/dacha_1_1.jpg';
 
     const currencySymbol = dacha.currency === 'UZS' ? 'so\'m' : '$';
     const weekdayPrice = parseFloat(dacha.weekday_price || dacha.default_price || 0);
     const weekendPrice = parseFloat(dacha.weekend_price || dacha.weekday_price || dacha.default_price || 0);
     const avgRating = dacha.avg_rating ? parseFloat(dacha.avg_rating).toFixed(1) : '5.0';
     const reviewsCount = dacha.reviews_count || 0;
-    const isFav = state.favoriteIds.includes(dacha.id);
+    const isFav = state.favoriteIds.includes(Number(dacha.id));
 
     return `
-      <div class="dacha-card" onclick="openDachaDetail(${dacha.id})">
+      <div class="dacha-card" id="dachaCard-${dacha.id}" data-dacha-id="${dacha.id}" onclick="openDachaDetail(${dacha.id})">
         <div class="card-img-wrapper">
           <img src="${firstImg}" alt="${dacha.name}" loading="lazy" />
           
@@ -230,7 +254,7 @@ function renderDachas(dachas) {
             ⭐ ${avgRating} <span style="font-weight: 500; font-size: 0.7rem; color: var(--text-muted);">(${reviewsCount})</span>
           </div>
 
-          <button class="card-btn-favorite ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, ${dacha.id})">
+          <button class="card-btn-favorite ${isFav ? 'active' : ''}" data-id="${dacha.id}" onclick="toggleFavorite(event, ${dacha.id})">
             ${isFav ? '❤️' : '🤍'}
           </button>
 
@@ -311,7 +335,7 @@ function updateMapMarkers(dachas) {
 
     const firstImg = dacha.media && dacha.media.length > 0 
       ? dacha.media[0].url 
-      : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400';
+      : '/storage/dachas/images/dacha_1_1.jpg';
 
     const avgRating = dacha.avg_rating ? parseFloat(dacha.avg_rating).toFixed(1) : '5.0';
 
@@ -365,54 +389,134 @@ function toggleViewMode() {
 }
 
 // ==========================================
-// FAVORITES (WISHLIST)
+// FAVORITES (WISHLIST) - OPTIMISTIC REAL-TIME UI
 // ==========================================
 
-async function toggleFavorite(e, dachaId) {
-  e.stopPropagation();
+function updateFavoriteButtonsDOM(numericId, isFav) {
+  document.querySelectorAll(`.card-btn-favorite[data-id="${numericId}"]`).forEach(btn => {
+    if (btn.innerText && (btn.innerText.includes('Saqlash') || btn.innerText.includes('Saqlangan'))) {
+      btn.innerHTML = isFav ? '❤️ Saqlangan' : '🤍 Saqlash';
+    } else {
+      btn.innerHTML = isFav ? '❤️' : '🤍';
+    }
+    btn.classList.toggle('active', isFav);
+  });
+}
+
+function rollbackFavorite(numericId, previousIsFav) {
+  if (previousIsFav) {
+    if (!state.favoriteIds.includes(numericId)) state.favoriteIds.push(numericId);
+  } else {
+    state.favoriteIds = state.favoriteIds.filter(id => id !== numericId);
+  }
+  updateFavoriteButtonsDOM(numericId, previousIsFav);
+}
+
+function toggleFavorite(e, dachaId) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  const numericId = Number(dachaId);
+
+  // Double click / race condition oldini olish
+  if (state.pendingFavorites.has(numericId)) {
+    return;
+  }
 
   if (!state.token) {
     openAuthModal('Dachani sevimlilar ro\'yxatiga qo\'shish uchun avval tizimga kiring.');
     return;
   }
 
-  try {
-    const res = await fetch(`${API_BASE}/favorites/${dachaId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+  state.pendingFavorites.add(numericId);
 
-    const result = await res.json();
+  // Tugmalarni vaqtincha bosilmaydigan qilish (Visual lock)
+  document.querySelectorAll(`.card-btn-favorite[data-id="${numericId}"]`).forEach(btn => {
+    btn.style.pointerEvents = 'none';
+  });
 
-    if (!res.ok) {
-      showToast(result.message || 'Xatolik yuz berdi', 'error');
-      return;
-    }
+  // 1. DARHOL (REAL-TIME OPTIMISTIC UI) YANGILASH
+  const currentlyFavorite = state.favoriteIds.includes(numericId);
+  const newFavoriteState = !currentlyFavorite;
 
-    if (result.is_favorite) {
-      if (!state.favoriteIds.includes(dachaId)) state.favoriteIds.push(dachaId);
-      showToast('❤️ Sevimlilar ro\'yxatiga saqlandi!', 'success');
-    } else {
-      state.favoriteIds = state.favoriteIds.filter(id => id !== dachaId);
-      showToast('Dacha sevimlilardan o\'chirildi.', 'success');
-    }
-
-    const btn = e.currentTarget;
-    if (btn) {
-      btn.innerHTML = result.is_favorite ? '❤️' : '🤍';
-      btn.classList.toggle('active', result.is_favorite);
-    }
-  } catch (err) {
-    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  if (newFavoriteState) {
+    if (!state.favoriteIds.includes(numericId)) state.favoriteIds.push(numericId);
+    showToast('❤️ Sevimlilar ro\'yxatiga saqlandi!', 'success');
+  } else {
+    state.favoriteIds = state.favoriteIds.filter(id => id !== numericId);
+    showToast('Dacha sevimlilardan o\'chirildi.', 'info');
   }
+
+  // Yurakcha tugmalarini darhol yangilash
+  updateFavoriteButtonsDOM(numericId, newFavoriteState);
+
+  // Agar hozir "❤️ Sevimlilarim" filtri sahifasida bo'lsa va dacha sevimlilardan o'chirilsa:
+  if (state.activeFilter === 'favorites' && !newFavoriteState) {
+    const card = document.getElementById(`dachaCard-${numericId}`) || document.querySelector(`.dacha-card[data-dacha-id="${numericId}"]`);
+    if (card) {
+      card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.9)';
+      setTimeout(() => {
+        card.style.display = 'none';
+        
+        // Qolgan ko'rinib turgan dachalar sonini hisoblash
+        const remainingCards = Array.from(document.querySelectorAll('#dachaGrid .dacha-card')).filter(c => c.style.display !== 'none');
+        const countEl = document.getElementById('resultsCount');
+        if (countEl) countEl.textContent = `${remainingCards.length} ta saqlangan dacha`;
+
+        if (remainingCards.length === 0) {
+          const grid = document.getElementById('dachaGrid');
+          if (grid) {
+            grid.innerHTML = `
+              <div style="grid-column: 1/-1; text-align: center; padding: 4rem 1rem; background: white; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">💔</div>
+                <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Hozircha sevimlilar yo'q</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Yoqqan dachalar ustidagi yurakcha (❤️) tugmasini bosib saqlang.</p>
+                <button class="btn btn-outline" style="margin-top: 1.25rem;" onclick="resetSearch()">Barcha dachalarni ko'rish</button>
+              </div>
+            `;
+          }
+        }
+      }, 300);
+    }
+  }
+
+  // 2. ORQA FONDA ASINXRON REQUEST YUBORISH (Background Sync)
+  fetch(`${API_BASE}/favorites/${numericId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${state.token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+  })
+  .then(async (res) => {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      rollbackFavorite(numericId, currentlyFavorite);
+      showToast(err.message || 'Xatolik yuz berdi', 'error');
+    }
+  })
+  .catch((err) => {
+    console.error('Favorite background sync error:', err);
+    rollbackFavorite(numericId, currentlyFavorite);
+    showToast('Server bilan bog\'lanishda xatolik yuz berdi', 'error');
+  })
+  .finally(() => {
+    state.pendingFavorites.delete(numericId);
+    document.querySelectorAll(`.card-btn-favorite[data-id="${numericId}"]`).forEach(btn => {
+      btn.style.pointerEvents = 'auto';
+    });
+  });
 }
 
 async function showFavoritesOnly(btn) {
   document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  const favPill = btn || document.querySelector('.pill-btn[onclick*="favorites"]');
+  if (favPill) favPill.classList.add('active');
 
   if (!state.token) {
     openAuthModal('Saqlangan dachalaringizni ko\'rish uchun iltimos, tizimga kiring.');
@@ -429,11 +533,14 @@ async function showFavoritesOnly(btn) {
 
   try {
     const res = await fetch(`${API_BASE}/favorites`, {
-      headers: { 'Authorization': `Bearer ${state.token}` }
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
     });
     const data = await res.json();
     const favDachas = data.favorites?.data || [];
-    state.favoriteIds = data.favorite_ids || [];
+    state.favoriteIds = (data.favorite_ids || []).map(id => Number(id));
 
     const countEl = document.getElementById('resultsCount');
     if (countEl) countEl.textContent = `${favDachas.length} ta saqlangan dacha`;
@@ -513,7 +620,7 @@ function renderDachaDetail(dacha, reviewsData = { reviews: [], avg_rating: 5.0, 
 
   const images = dacha.media && dacha.media.length > 0 
     ? dacha.media.map(m => m.url) 
-    : ['https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200&auto=format&fit=crop&q=80'];
+    : ['/storage/dachas/images/dacha_1_1.jpg'];
 
   const mainImg = images[0];
   const thumb1 = images[1] || mainImg;
@@ -527,6 +634,8 @@ function renderDachaDetail(dacha, reviewsData = { reviews: [], avg_rating: 5.0, 
   const avgRating = reviewsData.avg_rating || 5.0;
   const totalReviews = reviewsData.total_reviews || reviews.length;
 
+  const isFavDetail = state.favoriteIds.includes(Number(dacha.id));
+
   content.innerHTML = `
     <div class="detail-gallery">
       <img src="${mainImg}" class="detail-main-img" id="detailMainImg" alt="${dacha.name}" />
@@ -538,9 +647,14 @@ function renderDachaDetail(dacha, reviewsData = { reviews: [], avg_rating: 5.0, 
 
     <div class="detail-body">
       <div>
-        <div style="display:flex; align-items:center; gap: 0.5rem; margin-bottom: 0.5rem;">
-          <span style="background:var(--primary-light); color:var(--primary-dark); padding: 0.25rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700;">📍 ${dacha.region}, ${dacha.district}</span>
-          <span style="color:var(--text-muted); font-size:0.85rem;">${dacha.mahalla || ''} ${dacha.address || ''}</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div style="display:flex; align-items:center; gap: 0.5rem;">
+            <span style="background:var(--primary-light); color:var(--primary-dark); padding: 0.25rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700;">📍 ${dacha.region}, ${dacha.district}</span>
+            <span style="color:var(--text-muted); font-size:0.85rem;">${dacha.mahalla || ''} ${dacha.address || ''}</span>
+          </div>
+          <button class="card-btn-favorite ${isFavDetail ? 'active' : ''}" data-id="${dacha.id}" onclick="toggleFavorite(event, ${dacha.id})" style="position:static; width:auto; height:auto; padding: 0.35rem 0.85rem; font-size:0.85rem; border-radius:var(--radius-full); background:white; border:1px solid var(--border); box-shadow:none;">
+            ${isFavDetail ? '❤️ Saqlangan' : '🤍 Saqlash'}
+          </button>
         </div>
 
         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem;">
@@ -947,7 +1061,8 @@ async function loginAsDemo(role = 'owner') {
       updateAuthUI();
       closeModal('authModal');
       showToast(`${role === 'owner' ? 'Dacha egasi' : 'Mijoz'} sifatida tizimga kirdingiz!`, 'success');
-      loadFavorites();
+      await loadFavorites();
+      renderDachas(state.dachas);
       loadNotifications(true);
     } else {
       showToast('Kirishda xatolik yuz berdi', 'error');
@@ -994,6 +1109,10 @@ function logout() {
 function resetSearch() {
   const form = document.getElementById('searchForm');
   if (form) form.reset();
+  state.activeFilter = 'all';
+  document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+  const allBtn = document.querySelector('.pill-btn[onclick*="all"]');
+  if (allBtn) allBtn.classList.add('active');
   loadDachas();
 }
 
@@ -1001,12 +1120,14 @@ function filterByCategory(btn, category) {
   document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
+  state.activeFilter = category;
+
   if (category === 'all') {
     loadDachas();
   } else if (category === 'favorites') {
     showFavoritesOnly(btn);
   } else {
-    loadDachas();
+    loadDachas({ category });
   }
 }
 
@@ -1338,3 +1459,59 @@ const style = document.createElement('style');
 style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
 document.head.appendChild(style);
 
+
+// ==========================================
+// TOAST NOTIFICATION SYSTEM
+// ==========================================
+function showToast(message, type = 'success') {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.style.position = 'fixed';
+    container.style.bottom = '20px';
+    container.style.right = '20px';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.gap = '10px';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.style.background = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#3b82f6');
+  toast.style.color = '#fff';
+  toast.style.padding = '12px 20px';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+  toast.style.fontFamily = 'var(--font-sans, system-ui)';
+  toast.style.fontSize = '0.95rem';
+  toast.style.fontWeight = '500';
+  toast.style.display = 'flex';
+  toast.style.alignItems = 'center';
+  toast.style.justifyContent = 'space-between';
+  toast.style.transform = 'translateY(100px)';
+  toast.style.opacity = '0';
+  toast.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+  
+  toast.innerHTML = `
+    <span>${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Animate in
+  setTimeout(() => {
+    toast.style.transform = 'translateY(0)';
+    toast.style.opacity = '1';
+  }, 10);
+
+  // Animate out and remove
+  setTimeout(() => {
+    toast.style.transform = 'translateY(20px)';
+    toast.style.opacity = '0';
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
+  }, 3000);
+}

@@ -45,9 +45,10 @@ class FavoriteController extends Controller
         if ($favorite) {
             $favorite->delete();
             return response()->json([
+                'success' => true,
                 'is_favorite' => false,
-                'message' => 'Dacha sevimlilar ro\'yxatidan o\'chirildi.',
-                'dacha_id' => $dacha->id,
+                'message' => 'Dacha sevimlilar ro\'yxatidan olib tashlandi.',
+                'dacha_id' => (int) $dacha->id,
             ]);
         } else {
             Favorite::create([
@@ -56,10 +57,11 @@ class FavoriteController extends Controller
             ]);
 
             return response()->json([
+                'success' => true,
                 'is_favorite' => true,
                 'message' => 'Dacha sevimlilar ro\'yxatiga saqlandi! ❤️',
-                'dacha_id' => $dacha->id,
-            ], 201);
+                'dacha_id' => (int) $dacha->id,
+            ], 200);
         }
     }
 }

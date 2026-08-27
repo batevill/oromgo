@@ -37,9 +37,9 @@ class DachaSeeder extends Seeder
                 'status' => 'active',
                 'amenities' => [1, 2, 3, 5, 6, 7, 8, 9, 11, 12],
                 'images' => [
-                    'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1200&auto=format&fit=crop&q=80',
+                    'dachas/images/dacha_1_1.jpg',
+                    'dachas/images/dacha_1_2.jpg',
+                    'dachas/images/dacha_1_3.jpg',
                 ],
                 'reviews' => [
                     [
@@ -71,8 +71,8 @@ class DachaSeeder extends Seeder
                 'status' => 'active',
                 'amenities' => [2, 7, 8, 9, 11, 12],
                 'images' => [
-                    'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&auto=format&fit=crop&q=80',
+                    'dachas/images/dacha_2_1.jpg',
+                    'dachas/images/dacha_2_2.jpg',
                 ],
                 'reviews' => [
                     [
@@ -99,7 +99,7 @@ class DachaSeeder extends Seeder
                 'status' => 'active',
                 'amenities' => [1, 4, 7, 8, 9, 12],
                 'images' => [
-                    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80',
+                    'dachas/images/dacha_3_1.jpg',
                 ],
                 'reviews' => [
                     [
@@ -126,7 +126,7 @@ class DachaSeeder extends Seeder
                 'status' => 'active',
                 'amenities' => [1, 3, 6, 7, 8, 9, 11],
                 'images' => [
-                    'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200&auto=format&fit=crop&q=80',
+                    'dachas/images/dacha_4_1.jpg',
                 ],
                 'reviews' => []
             ],
@@ -147,7 +147,7 @@ class DachaSeeder extends Seeder
                 'status' => 'active',
                 'amenities' => [1, 5, 7, 8, 9, 12],
                 'images' => [
-                    'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&auto=format&fit=crop&q=80',
+                    'dachas/images/dacha_5_1.jpg',
                 ],
                 'reviews' => []
             ],
@@ -168,7 +168,7 @@ class DachaSeeder extends Seeder
                 'status' => 'active',
                 'amenities' => [7, 8, 9, 11],
                 'images' => [
-                    'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=1200&auto=format&fit=crop&q=80',
+                    'dachas/images/dacha_6_1.jpg',
                 ],
                 'reviews' => []
             ]
@@ -207,13 +207,12 @@ class DachaSeeder extends Seeder
             $dacha->amenities()->sync($amenityIds);
 
             // Media
-            if ($dacha->media()->count() === 0) {
-                foreach ($images as $imgUrl) {
-                    $dacha->media()->create([
-                        'type' => 'image',
-                        'path' => $imgUrl,
-                    ]);
-                }
+            $dacha->media()->delete();
+            foreach ($images as $imgUrl) {
+                $dacha->media()->create([
+                    'type' => 'image',
+                    'path' => $imgUrl,
+                ]);
             }
 
             // Reviews
