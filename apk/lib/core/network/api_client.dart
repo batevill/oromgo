@@ -110,6 +110,24 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl$endpoint');
+      final headers = await _getHeaders();
+      final response = await http
+          .put(
+            uri,
+            headers: headers,
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(const Duration(seconds: 15));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Tarmoq xatoligi: $e');
+    }
+  }
+
   Future<dynamic> delete(String endpoint) async {
     try {
       final uri = Uri.parse('$_baseUrl$endpoint');

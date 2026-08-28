@@ -5,6 +5,7 @@ import '../core/utils/formatters.dart';
 import '../models/notification_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
+import '../views/explore/dacha_detail_screen.dart';
 
 class NotificationItemCard extends StatelessWidget {
   final NotificationModel notification;
@@ -74,6 +75,14 @@ class NotificationItemCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           onTap: () {
             notifProvider.markAsRead(notification.id);
+            if (notification.dachaId != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DachaDetailScreen(dachaId: notification.dachaId!),
+                ),
+              );
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(16),

@@ -33,6 +33,7 @@ class DachaModel {
   final double weekdayPrice;
   final double weekendPrice;
   final String currency;
+  final String status;
   final int capacity;
   final int roomsCount;
   final double? latitude;
@@ -55,6 +56,7 @@ class DachaModel {
     required this.weekdayPrice,
     required this.weekendPrice,
     this.currency = 'USD',
+    this.status = 'active',
     required this.capacity,
     required this.roomsCount,
     this.latitude,
@@ -97,6 +99,7 @@ class DachaModel {
       weekdayPrice: double.tryParse(json['weekday_price']?.toString() ?? '0') ?? 0.0,
       weekendPrice: double.tryParse(json['weekend_price']?.toString() ?? json['weekday_price']?.toString() ?? '0') ?? 0.0,
       currency: json['currency'] ?? 'USD',
+      status: json['status'] ?? 'active',
       capacity: int.tryParse(json['capacity']?.toString() ?? '1') ?? 1,
       roomsCount: int.tryParse(json['rooms_count']?.toString() ?? '1') ?? 1,
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,

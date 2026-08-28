@@ -31,6 +31,15 @@ class NotificationModel {
   bool get isReminder => type == 'booking_reminder';
 
   String? get dachaName => data?['dacha_name'];
+  int? get dachaId {
+    if (data != null && data!['dacha_id'] != null) {
+      return int.tryParse(data!['dacha_id'].toString());
+    }
+    if (booking != null && booking!.dacha != null) {
+      return booking!.dacha!.id;
+    }
+    return null;
+  }
   String? get guestName => data?['guest_name'];
   String? get guestPhone => data?['guest_phone'];
   String? get startDate => data?['start_date'];
