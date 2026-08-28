@@ -110,6 +110,7 @@
        ========================================== -->
   <div class="category-bar">
     <button class="pill-btn active" onclick="filterByCategory(this, 'all')">🏡 Barcha dachalar</button>
+    <button class="pill-btn" id="myDachasPillBtn" onclick="openOwnerCabinetModal('dachas')" style="display: none; color: #0284c7; border-color: #bae6fd; font-weight: 700;">🗂️ Mening dachalarim</button>
     <button class="pill-btn" onclick="filterByCategory(this, 'favorites')" style="color: #e11d48; border-color: #fecdd3;">❤️ Sevimlilarim</button>
     <button class="pill-btn" onclick="filterByCategory(this, 'pool')">🏊‍♂️ Basseynli</button>
     <button class="pill-btn" onclick="filterByCategory(this, 'sauna')">🧖‍♂️ Sauna / Hammom</button>
@@ -349,7 +350,195 @@
         </div>
       </div>
     </div>
+  <!-- ==========================================
+       MODAL: OWNER DASHBOARD & CABINET
+       ========================================== -->
+  <div class="modal-backdrop" id="ownerCabinetModal">
+    <div class="modal-content cabinet-modal-content">
+      <div class="cabinet-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="font-size: 2rem;">🗂️</div>
+          <div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--dark); margin: 0;">Dacha Egasi Kabineti</h2>
+            <p style="font-size: 0.825rem; color: var(--text-muted); margin: 0;">Joylagan dachalaringiz, tushgan bronlar va kalendarni boshqaring</p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <button class="btn btn-accent" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="closeModal('ownerCabinetModal'); openOwnerModal();">
+            <span>➕</span> Yangi e'lon
+          </button>
+          <button class="modal-close" onclick="closeModal('ownerCabinetModal')">✕</button>
+        </div>
+      </div>
+
+      <!-- Cabinet Tabs -->
+      <div class="cabinet-tabs">
+        <button class="cabinet-tab-btn active" id="tabOwnerDachasBtn" onclick="switchCabinetTab('dachas')">
+          🏡 Mening dachalarim (<span id="ownerDachasCount">0</span>)
+        </button>
+        <button class="cabinet-tab-btn" id="tabOwnerBookingsBtn" onclick="switchCabinetTab('bookings')">
+          📋 Kelgan bronlar (<span id="ownerBookingsCount">0</span>)
+        </button>
+        <button class="cabinet-tab-btn" id="tabOwnerBlockDatesBtn" onclick="switchCabinetTab('blockDates')">
+          🚫 Sanalarni band qilish (Yopish)
+        </button>
+      </div>
+
+      <!-- Cabinet Body -->
+      <div class="cabinet-body">
+        <!-- Tab 1: Dachalarim -->
+        <div id="cabinetTabDachas">
+          <div id="ownerDachasList">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Bronlar -->
+        <div id="cabinetTabBookings" style="display: none;">
+          <div id="ownerBookingsList">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Sanalarni yopish formasi -->
+        <div id="cabinetTabBlockDates" style="display: none;">
+          <div style="max-width: 580px; margin: 0 auto; background: white; padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+            <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--dark);">🚫 Dachani ma'lum sanalarga yopib qo'yish</h3>
+            <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">Tanlangan sanalarda mijozlar dacha band qila olmaydilar (masalan: ta'mirlash yoki o'zingiz dam olganingizda).</p>
+            
+            <form id="ownerBlockDatesForm">
+              <div class="form-group">
+                <label>Dachani tanlang *</label>
+                <select id="blockDatesDachaSelect" class="form-control" required>
+                  <!-- Injected via JS -->
+                </select>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label>Boshlanish sanasi *</label>
+                  <input type="date" id="blockStartDate" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label>Tugash sanasi *</label>
+                  <input type="date" id="blockEndDate" class="form-control" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Yopish sababi (Ixtiyoriy)</label>
+                <input type="text" id="blockReason" class="form-control" placeholder="Masalan: Ta'mirlash ishlari yoki o'zimiz dam olamiz" />
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 0.95rem; margin-top: 0.5rem;">
+                🔒 Sanalarni yopish
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- ==========================================
+       MODAL: OWNER EDIT DACHA
+       ========================================== -->
+  <div class="modal-backdrop" id="editDachaModal">
+    <div class="modal-content" style="max-width: 760px; padding: 2rem;">
+      <button class="modal-close" onclick="closeModal('editDachaModal')">✕</button>
+      
+      <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+        <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--dark);">✏️ Dachani tahrirlash</h2>
+        <p style="color: var(--text-muted); font-size: 0.875rem;">Dacha ma'lumotlari, narxlari va qulayliklarini yangilang.</p>
+      </div>
+
+      <form id="editDachaForm">
+        <input type="hidden" id="editDachaId" />
+
+        <div class="form-group">
+          <label>Dacha nomi (Sarlavha) *</label>
+          <input type="text" id="editName" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label>Tavsif</label>
+          <textarea id="editDescription" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Viloyat *</label>
+            <select id="editRegion" class="form-control" required>
+              <option value="">Viloyatni tanlang</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tuman *</label>
+            <select id="editDistrict" class="form-control" required>
+              <option value="">Tumanni tanlang</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Mahalla / Hudud</label>
+            <input type="text" id="editMahalla" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Aniq manzil / Mo'ljal</label>
+            <input type="text" id="editAddress" class="form-control" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Ish kunlari narxi *</label>
+            <input type="number" id="editWeekdayPrice" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Dam olish narxi</label>
+            <input type="number" id="editWeekendPrice" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Valyuta *</label>
+            <select id="editCurrency" class="form-control">
+              <option value="USD">USD ($)</option>
+              <option value="UZS">UZS (so'm)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Sig'imi (Kishi soni) *</label>
+            <input type="number" id="editCapacity" class="form-control" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>Xonalar soni *</label>
+            <input type="number" id="editRoomsCount" class="form-control" min="1" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Mavjud qulayliklar</label>
+          <div id="editAmenitiesCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
+            <!-- Checkboxes injected via JS -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Yangi rasmlar qo'shish (Ixtiyoriy)</label>
+          <input type="file" id="editImages" class="form-control" multiple accept="image/*" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.95rem; font-size: 1.05rem; margin-top: 1rem;">
+          💾 Saqlash va yangilash
+        </button>
+      </form>
+    </div>
+  </div>
+
 
   <!-- ==========================================
        FOOTER

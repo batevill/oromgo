@@ -23,6 +23,10 @@ const state = {
   hasTelegramLinked: false,
   notifFilter: 'all',
   pendingDachaId: null,
+  pendingAction: null,
+  ownerDachas: [],
+  ownerBookings: [],
+  activeCabinetTab: 'dachas',
   token: localStorage.getItem('oromgo_token') || '',
   user: JSON.parse(localStorage.getItem('oromgo_user') || 'null'),
 };
@@ -101,10 +105,29 @@ function setupEventListeners() {
     });
   }
 
+  const editRegion = document.getElementById('editRegion');
+  if (editRegion) {
+    editRegion.addEventListener('change', () => {
+      populateDistrictsForSelect('editDistrict', editRegion.value, 'Tumanni tanlang');
+    });
+  }
+
   // Owner Dacha Create Form Submit
   const createDachaForm = document.getElementById('createDachaForm');
   if (createDachaForm) {
     createDachaForm.addEventListener('submit', handleCreateDacha);
+  }
+
+  // Owner Dacha Edit Form Submit
+  const editDachaForm = document.getElementById('editDachaForm');
+  if (editDachaForm) {
+    editDachaForm.addEventListener('submit', handleUpdateDacha);
+  }
+
+  // Owner Block Dates Form Submit
+  const ownerBlockDatesForm = document.getElementById('ownerBlockDatesForm');
+  if (ownerBlockDatesForm) {
+    ownerBlockDatesForm.addEventListener('submit', handleBlockDatesSubmit);
   }
 }
 
@@ -138,6 +161,13 @@ function populateRegionSelects() {
   const ownerRegSelect = document.getElementById('ownerRegion');
   if (ownerRegSelect) {
     ownerRegSelect.innerHTML = '<option value="">Viloyatni tanlang</option>' +
+      regions.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+
+  // Edit Form Region select
+  const editRegSelect = document.getElementById('editRegion');
+  if (editRegSelect) {
+    editRegSelect.innerHTML = '<option value="">Viloyatni tanlang</option>' +
       regions.map(r => `<option value="${r}">${r}</option>`).join('');
   }
 }
@@ -1089,6 +1119,494 @@ async function handleCreateDacha(e) {
 }
 
 // ==========================================
+// OWNER CABINET & DASHBOARD LOGIC
+// ==========================================
+
+async function openOwnerCabinetModal(tab = 'dachas') {
+  if (!state.token) {
+    state.pendingAction = 'open_owner_cabinet';
+    openAuthModal('Dacha egasi kabinetiga kirish uchun iltimos, avval tizimga kiring.');
+    return;
+  }
+
+  if (state.user && state.user.role !== 'owner' && state.user.role !== 'admin' && state.user.role !== 'super_admin') {
+    state.pendingAction = 'open_owner_cabinet';
+    openAuthModal('Kabinetga kirish uchun dacha egasi (owner) huquqi talab qilinadi. Iltimos, dacha egasi sifatida kiring yoki demo orqali sinab ko\'ring.');
+    return;
+  }
+
+  openModal('ownerCabinetModal');
+  switchCabinetTab(tab);
+  await Promise.all([loadOwnerDachas(), loadOwnerBookings()]);
+}
+
+function switchCabinetTab(tab) {
+  state.activeCabinetTab = tab;
+
+  // Update tab buttons
+  document.getElementById('tabOwnerDachasBtn')?.classList.toggle('active', tab === 'dachas');
+  document.getElementById('tabOwnerBookingsBtn')?.classList.toggle('active', tab === 'bookings');
+  document.getElementById('tabOwnerBlockDatesBtn')?.classList.toggle('active', tab === 'blockDates');
+
+  // Update tab views
+  const tabDachas = document.getElementById('cabinetTabDachas');
+  const tabBookings = document.getElementById('cabinetTabBookings');
+  const tabBlockDates = document.getElementById('cabinetTabBlockDates');
+
+  if (tabDachas) tabDachas.style.display = tab === 'dachas' ? 'block' : 'none';
+  if (tabBookings) tabBookings.style.display = tab === 'bookings' ? 'block' : 'none';
+  if (tabBlockDates) tabBlockDates.style.display = tab === 'blockDates' ? 'block' : 'none';
+}
+
+async function loadOwnerDachas() {
+  const container = document.getElementById('ownerDachasList');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align: center; padding: 3rem;">
+      <div style="display:inline-block; width: 35px; height: 35px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">Dachalaringiz yuklanmoqda...</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE}/owner/dachas`, {
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      state.ownerDachas = data.data || [];
+      const countEl = document.getElementById('ownerDachasCount');
+      if (countEl) countEl.textContent = state.ownerDachas.length;
+      renderOwnerDachasList(state.ownerDachas);
+      populateBlockDatesDachaSelect(state.ownerDachas);
+    } else {
+      container.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Dachalarni yuklashda xatolik yuz berdi.</p>`;
+    }
+  } catch (err) {
+    console.error('loadOwnerDachas error:', err);
+    container.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Server bilan bog'lanishda xatolik.</p>`;
+  }
+}
+
+function populateBlockDatesDachaSelect(dachas) {
+  const select = document.getElementById('blockDatesDachaSelect');
+  if (!select) return;
+
+  if (!dachas || dachas.length === 0) {
+    select.innerHTML = '<option value="">Avval dacha e\'lonini joylang</option>';
+    return;
+  }
+
+  select.innerHTML = dachas.map(d => `<option value="${d.id}">${escapeHtml(d.name)} (${d.district || d.region})</option>`).join('');
+}
+
+function renderOwnerDachasList(dachas) {
+  const container = document.getElementById('ownerDachasList');
+  if (!container) return;
+
+  if (!dachas || dachas.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 4rem 1rem; background: white; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏡</div>
+        <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Hozircha e'lonlaringiz yo'q</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Yangi dacha e'lonini joylashtiring va mijozlar qabul qilishni boshlang.</p>
+        <button class="btn btn-primary" onclick="closeModal('ownerCabinetModal'); openOwnerModal();">
+          ➕ Yangi dacha e'lonini joylash
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="owner-dacha-grid">
+      ${dachas.map(dacha => {
+        const firstImg = dacha.media && dacha.media.length > 0 
+          ? dacha.media[0].url 
+          : '/storage/dachas/images/dacha_1_1.jpg';
+        const currencySymbol = dacha.currency === 'UZS' ? 'so\'m' : '$';
+        const weekdayPrice = parseFloat(dacha.weekday_price || dacha.default_price || 0);
+        const weekendPrice = parseFloat(dacha.weekend_price || dacha.weekday_price || dacha.default_price || 0);
+        const statusBadgeClass = dacha.status === 'active' ? 'badge-active' : (dacha.status === 'pending' ? 'badge-pending' : 'badge-inactive');
+        const statusText = dacha.status === 'active' ? 'Faol' : (dacha.status === 'pending' ? 'Kutilmoqda' : 'Nofaol');
+
+        return `
+          <div class="owner-dacha-card">
+            <div class="owner-dacha-img-wrap">
+              <img src="${firstImg}" alt="${escapeHtml(dacha.name)}" />
+              <div class="owner-dacha-status-badge ${statusBadgeClass}">
+                ● ${statusText}
+              </div>
+            </div>
+            <div class="owner-dacha-info">
+              <h3 class="owner-dacha-title">${escapeHtml(dacha.name)}</h3>
+              <div class="owner-dacha-loc">
+                <span>📍</span> ${escapeHtml(dacha.region || '')}, ${escapeHtml(dacha.district || '')}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                👥 ${dacha.capacity || 1} kishilik • 🛏️ ${dacha.rooms_count || 1} xona
+              </div>
+              <div class="owner-dacha-prices">
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Ish kunlari:</span>
+                  <div style="font-weight: 700; color: var(--dark);">${weekdayPrice.toLocaleString()} ${currencySymbol}</div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Dam olish:</span>
+                  <div style="font-weight: 700; color: var(--accent);">${weekendPrice.toLocaleString()} ${currencySymbol}</div>
+                </div>
+              </div>
+              <div class="owner-dacha-actions">
+                <button class="btn btn-outline" onclick="closeModal('ownerCabinetModal'); openDachaDetail(${dacha.id});" title="Mijozlar ko'radigan sahifani ochish">
+                  👁️ Ko'rish
+                </button>
+                <button class="btn btn-outline" style="color: #2563eb; border-color: #bfdbfe;" onclick="openEditDachaModal(${dacha.id})">
+                  ✏️ Tahrirlash
+                </button>
+                <button class="btn btn-outline" style="color: #d97706; border-color: #fde68a;" onclick="openBlockDatesForDacha(${dacha.id})">
+                  🚫 Yopish
+                </button>
+                <button class="btn btn-outline" style="color: #ef4444; border-color: #fecaca;" onclick="deleteOwnerDacha(${dacha.id})">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function loadOwnerBookings() {
+  const container = document.getElementById('ownerBookingsList');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align: center; padding: 3rem;">
+      <div style="display:inline-block; width: 35px; height: 35px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">Bron so'rovlari yuklanmoqda...</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE}/owner/bookings`, {
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      state.ownerBookings = data.data || [];
+      const countEl = document.getElementById('ownerBookingsCount');
+      if (countEl) countEl.textContent = state.ownerBookings.length;
+      renderOwnerBookingsList(state.ownerBookings);
+    } else {
+      container.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Bronlarni yuklashda xatolik yuz berdi.</p>`;
+    }
+  } catch (err) {
+    console.error('loadOwnerBookings error:', err);
+    container.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Server bilan bog'lanishda xatolik.</p>`;
+  }
+}
+
+function renderOwnerBookingsList(bookings) {
+  const container = document.getElementById('ownerBookingsList');
+  if (!container) return;
+
+  if (!bookings || bookings.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 3.5rem 1rem; background: white; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">📋</div>
+        <h4 style="font-size: 1.15rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Hozircha bron so'rovlari yo'q</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Mijozlar dachangizni bron qilishganda barcha so'rovlar shu yerda va Telegram botingizda ko'rinadi.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = bookings.map(b => {
+    const dachaName = b.dacha?.name || 'Dacha';
+    const guestName = b.user?.name || 'Mijoz';
+    const guestPhone = b.user?.phone || 'Kiritilmagan';
+    const startDate = b.start_date ? b.start_date.split('T')[0] : '';
+    const endDate = b.end_date ? b.end_date.split('T')[0] : '';
+    const totalPrice = parseFloat(b.total_price || 0).toLocaleString();
+    const currency = b.currency || 'USD';
+    const isPending = b.status === 'pending';
+    const isConfirmed = b.status === 'confirmed';
+    const isCancelled = b.status === 'cancelled';
+
+    let statusBadge = `<span class="notif-type-badge booking_created">Kutilmoqda ⏳</span>`;
+    if (isConfirmed) statusBadge = `<span class="notif-type-badge booking_confirmed">Tasdiqlangan ✅</span>`;
+    if (isCancelled) statusBadge = `<span class="notif-type-badge booking_cancelled">Bekor qilingan ❌</span>`;
+
+    return `
+      <div class="owner-booking-card">
+        <div class="owner-booking-header">
+          <div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--dark);">🏡 ${escapeHtml(dachaName)}</div>
+            <div style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.15rem;">Bron raqami: #${b.id} • ${formatTimeAgo(b.created_at)}</div>
+          </div>
+          <div>${statusBadge}</div>
+        </div>
+
+        <div class="owner-booking-grid">
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">👤 Mijoz:</span>
+            <strong>${escapeHtml(guestName)}</strong>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">📞 Telefon:</span>
+            <strong>${escapeHtml(guestPhone)}</strong>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">📅 Sanalar:</span>
+            <strong>${startDate} — ${endDate}</strong>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">💰 Jami summa:</span>
+            <strong style="color: var(--primary);">${totalPrice} ${currency}</strong>
+          </div>
+          ${b.notes ? `
+            <div style="grid-column: 1/-1;">
+              <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">💬 Izoh:</span>
+              <span style="color: var(--dark); font-size: 0.85rem;">${escapeHtml(b.notes)}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        ${isPending ? `
+          <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
+            <button class="btn-confirm-sm" onclick="handleOwnerBookingDecisionInCabinet(${b.id}, 'confirm')">
+              <span>✅</span> Tasdiqlash
+            </button>
+            <button class="btn-reject-sm" onclick="handleOwnerBookingDecisionInCabinet(${b.id}, 'reject')">
+              <span>❌</span> Rad etish
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function handleOwnerBookingDecisionInCabinet(bookingId, action) {
+  try {
+    const res = await fetch(`${API_BASE}/owner/bookings/${bookingId}/${action}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast(action === 'confirm' ? '🎉 Bron tasdiqlandi!' : 'Bron rad etildi.', 'success');
+      await loadOwnerBookings();
+      loadNotifications(false);
+    } else {
+      showToast(data.message || 'Xatolik yuz berdi', 'error');
+    }
+  } catch (err) {
+    console.error('handleOwnerBookingDecisionInCabinet error:', err);
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  }
+}
+
+async function deleteOwnerDacha(dachaId) {
+  if (!confirm('Haqiqatan ham ushbu dacha e\'lonini o\'chirmoqchimisiz?')) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/owner/dachas/${dachaId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Dacha muvaffaqiyatli o\'chirildi.', 'success');
+      await loadOwnerDachas();
+      loadDachas();
+    } else {
+      showToast(data.message || 'O\'chirishda xatolik yuz berdi', 'error');
+    }
+  } catch (err) {
+    console.error('deleteOwnerDacha error:', err);
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  }
+}
+
+function openBlockDatesForDacha(dachaId) {
+  openOwnerCabinetModal('blockDates');
+  setTimeout(() => {
+    const select = document.getElementById('blockDatesDachaSelect');
+    if (select && dachaId) {
+      select.value = dachaId;
+    }
+  }, 200);
+}
+
+async function handleBlockDatesSubmit(e) {
+  e.preventDefault();
+
+  const dachaId = document.getElementById('blockDatesDachaSelect')?.value;
+  const startDate = document.getElementById('blockStartDate')?.value;
+  const endDate = document.getElementById('blockEndDate')?.value;
+  const reason = document.getElementById('blockReason')?.value;
+
+  if (!dachaId || !startDate || !endDate) {
+    showToast('Barcha majburiy maydonlarni to\'ldiring', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/owner/dachas/${dachaId}/block-dates`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        start_date: startDate,
+        end_date: endDate,
+        reason: reason
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast('🔒 Sanalar muvaffaqiyatli band qilib yopildi!', 'success');
+      document.getElementById('ownerBlockDatesForm')?.reset();
+      switchCabinetTab('dachas');
+    } else {
+      showToast(data.message || 'Sanalarni yopishda xatolik', 'error');
+    }
+  } catch (err) {
+    console.error('handleBlockDatesSubmit error:', err);
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  }
+}
+
+async function openEditDachaModal(dachaId) {
+  const dacha = state.ownerDachas.find(d => d.id === dachaId);
+  if (!dacha) {
+    showToast('Dacha ma\'lumotlari topilmadi', 'error');
+    return;
+  }
+
+  document.getElementById('editDachaId').value = dacha.id;
+  document.getElementById('editName').value = dacha.name || '';
+  document.getElementById('editDescription').value = dacha.description || '';
+  document.getElementById('editWeekdayPrice').value = dacha.weekday_price || dacha.default_price || '';
+  document.getElementById('editWeekendPrice').value = dacha.weekend_price || '';
+  document.getElementById('editCurrency').value = dacha.currency || 'USD';
+  document.getElementById('editCapacity').value = dacha.capacity || 10;
+  document.getElementById('editRoomsCount').value = dacha.rooms_count || 4;
+  document.getElementById('editMahalla').value = dacha.mahalla || '';
+  document.getElementById('editAddress').value = dacha.address || '';
+
+  // Populate regions
+  populateRegionSelects();
+  const editRegSelect = document.getElementById('editRegion');
+  if (editRegSelect && dacha.region) {
+    editRegSelect.value = dacha.region;
+    populateDistrictsForSelect('editDistrict', dacha.region, 'Tumanni tanlang');
+    const editDistSelect = document.getElementById('editDistrict');
+    if (editDistSelect && dacha.district) {
+      editDistSelect.value = dacha.district;
+    }
+  }
+
+  // Render amenities checkboxes
+  const container = document.getElementById('editAmenitiesCheckboxes');
+  if (container) {
+    const dachaAmenityIds = (dacha.amenities || []).map(a => a.id);
+    container.innerHTML = state.amenities.map(a => `
+      <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; background: var(--bg-page); padding: 0.4rem 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border); cursor: pointer;">
+        <input type="checkbox" name="amenities[]" value="${a.id}" ${dachaAmenityIds.includes(a.id) ? 'checked' : ''} />
+        <span>${a.icon || '✨'}</span> ${escapeHtml(a.name)}
+      </label>
+    `).join('');
+  }
+
+  openModal('editDachaModal');
+}
+
+async function handleUpdateDacha(e) {
+  e.preventDefault();
+
+  const dachaId = document.getElementById('editDachaId').value;
+  if (!dachaId) return;
+
+  const form = document.getElementById('editDachaForm');
+  const formData = new FormData(form);
+
+  formData.set('name', document.getElementById('editName').value);
+  formData.set('description', document.getElementById('editDescription').value);
+  formData.set('region', document.getElementById('editRegion').value);
+  formData.set('district', document.getElementById('editDistrict').value);
+  formData.set('mahalla', document.getElementById('editMahalla').value);
+  formData.set('address', document.getElementById('editAddress').value);
+  formData.set('weekday_price', document.getElementById('editWeekdayPrice').value);
+  formData.set('weekend_price', document.getElementById('editWeekendPrice').value);
+  formData.set('currency', document.getElementById('editCurrency').value);
+  formData.set('capacity', document.getElementById('editCapacity').value);
+  formData.set('rooms_count', document.getElementById('editRoomsCount').value);
+  formData.append('_method', 'PUT');
+
+  const btn = form.querySelector('button[type="submit"]');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Saqlanmoqda...';
+
+  try {
+    const res = await fetch(`${API_BASE}/owner/dachas/${dachaId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      },
+      body: formData
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      showToast('🎉 Dacha ma\'lumotlari muvaffaqiyatli yangilandi!', 'success');
+      closeModal('editDachaModal');
+      await loadOwnerDachas();
+      loadDachas();
+    } else {
+      let errMsg = result.message || 'Xatolik yuz berdi';
+      if (result.errors) {
+        errMsg = Object.values(result.errors).flat().join('<br>');
+      }
+      showToast(errMsg, 'error');
+    }
+  } catch (err) {
+    console.error('handleUpdateDacha error:', err);
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+// ==========================================
 // AUTH & MODALS
 // ==========================================
 
@@ -1149,6 +1667,14 @@ async function loginAsDemo(role = 'owner') {
           openOwnerModal();
         }
       }
+
+      // Agar kabinetni ochmoqchi bo'lgan bo'lsa
+      if (state.pendingAction === 'open_owner_cabinet') {
+        state.pendingAction = null;
+        if (state.user && (state.user.role === 'owner' || state.user.role === 'admin' || state.user.role === 'super_admin')) {
+          openOwnerCabinetModal('dachas');
+        }
+      }
     } else {
       showToast('Kirishda xatolik yuz berdi', 'error');
     }
@@ -1164,11 +1690,23 @@ function loginAsDemoOwner() {
 
 function updateAuthUI() {
   const userBox = document.getElementById('navUserBox');
+  const myDachasPillBtn = document.getElementById('myDachasPillBtn');
   if (!userBox) return;
+
+  const isOwner = state.user && (state.user.role === 'owner' || state.user.role === 'admin' || state.user.role === 'super_admin');
+
+  if (myDachasPillBtn) {
+    myDachasPillBtn.style.display = (state.token && isOwner) ? 'inline-block' : 'none';
+  }
 
   if (state.user && state.token) {
     userBox.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 0.65rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        ${isOwner ? `
+          <button class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: var(--primary); color: var(--primary); font-weight: 700;" onclick="openOwnerCabinetModal('dachas')">
+            🗂️ Kabinet
+          </button>
+        ` : ''}
         <span style="font-weight: 700; font-size: 0.9rem; color: var(--dark);">👤 ${state.user.name.split(' ')[0]}</span>
         <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="logout()">Chiqish</button>
       </div>
