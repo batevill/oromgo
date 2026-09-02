@@ -181,7 +181,7 @@
           <textarea name="description" class="form-control" rows="3" placeholder="Dacha sharoitlari, afzalliklari haqida batafsil yozing..."></textarea>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-row-2">
           <div class="form-group">
             <label>Viloyat *</label>
             <select name="region" id="ownerRegion" class="form-control" required>
@@ -196,7 +196,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-row-2">
           <div class="form-group">
             <label>Mahalla / Hudud</label>
             <input type="text" name="mahalla" class="form-control" placeholder="Yusufxona" />
@@ -207,7 +207,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+        <div class="form-row-3">
           <div class="form-group">
             <label>Ish kunlari narxi *</label>
             <input type="number" name="weekday_price" class="form-control" placeholder="150" required />
@@ -225,7 +225,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-row-2">
           <div class="form-group">
             <label>Sig'imi (Kishi soni) *</label>
             <input type="number" name="capacity" class="form-control" value="10" min="1" required />
@@ -465,7 +465,7 @@
           <textarea id="editDescription" class="form-control" rows="3"></textarea>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-row-2">
           <div class="form-group">
             <label>Viloyat *</label>
             <select id="editRegion" class="form-control" required>
@@ -480,7 +480,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-row-2">
           <div class="form-group">
             <label>Mahalla / Hudud</label>
             <input type="text" id="editMahalla" class="form-control" />
@@ -491,7 +491,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+        <div class="form-row-3">
           <div class="form-group">
             <label>Ish kunlari narxi *</label>
             <input type="number" id="editWeekdayPrice" class="form-control" required />
@@ -509,7 +509,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-row-2">
           <div class="form-group">
             <label>Sig'imi (Kishi soni) *</label>
             <input type="number" id="editCapacity" class="form-control" min="1" required />

@@ -41,13 +41,30 @@
   box-sizing: border-box;
 }
 
+img, picture, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg-page);
   color: var(--dark);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  min-height: 100vh;
 }
 
 /* ==========================================================================
@@ -1509,8 +1526,37 @@ body {
 }
 
 /* ==========================================================================
-   MOBILE RESPONSIVE SYSTEM (< 640px)
+   MOBILE & TABLET RESPONSIVE SYSTEM
    ========================================================================== */
+
+/* Tablet (< 868px) */
+@media (max-width: 868px) {
+  .search-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-field {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 0.5rem;
+  }
+
+  .detail-body {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-gallery {
+    grid-template-columns: 1fr;
+    height: 280px;
+  }
+
+  .detail-thumb-grid {
+    display: none;
+  }
+}
+
+/* Mobile (< 640px) */
 @media (max-width: 640px) {
   .navbar {
     padding: 0.6rem 0.85rem;
@@ -1521,7 +1567,7 @@ body {
   }
 
   .brand-logo {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     gap: 0.4rem;
   }
 
@@ -1536,8 +1582,8 @@ body {
   }
 
   .btn {
-    padding: 0.45rem 0.75rem;
-    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.825rem;
   }
 
   .notification-bell-btn {
@@ -1560,18 +1606,24 @@ body {
     margin-bottom: 1.25rem;
   }
 
-  .search-container {
-    padding: 0 0.5rem;
-  }
-
   .search-card {
     padding: 0.75rem;
     border-radius: var(--radius-lg);
   }
 
+  .form-row-2,
+  .form-row-3 {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .form-control {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS Safari */
+  }
+
   .dacha-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 1.25rem;
   }
 
   .owner-dacha-grid {
@@ -1579,14 +1631,16 @@ body {
     gap: 1rem;
   }
 
-  .modal {
-    padding: 0.4rem;
+  .modal-backdrop {
+    padding: 0.5rem;
   }
 
   .modal-content {
     max-height: 94vh;
     border-radius: var(--radius-lg);
     padding: 1.25rem 1rem;
+    margin: 0;
+    width: 100%;
   }
 
   .cabinet-modal-content,
@@ -1660,6 +1714,7 @@ body {
     border-radius: var(--radius-md);
   }
 
+  .category-bar,
   .filter-pills-bar {
     padding: 0.5rem 0.85rem;
     gap: 0.4rem;
