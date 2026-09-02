@@ -122,6 +122,24 @@
       align-items: center;
       gap: 0.3rem;
     }
+    .gallery-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.65rem;
+      margin: 1rem 0;
+    }
+    .gallery-preview img {
+      width: 100%;
+      height: 95px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .gallery-preview img:hover {
+      transform: scale(1.03);
+    }
   </style>
 </head>
 <body class="admin-layout">
@@ -135,7 +153,7 @@
         <span class="badge">Moderatsiya</span>
       </a>
       <a href="/" class="btn btn-outline" style="color: #cbd5e1; border-color: #475569; padding: 0.4rem 0.85rem; font-size: 0.85rem;" target="_blank">
-        🌐 Asosiy saytga o'tish
+        🌐 Asosiy saytni ko'rish
       </a>
     </div>
 
@@ -153,7 +171,7 @@
       <div>
         <h1 style="font-size: 1.75rem; font-weight: 800; color: #0f172a;">Dachalarni Moderatsiya Qilish</h1>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
-          Yangi joylangan dachalarni tekshirish, faollashtirish (saytga chiqarish) yoki to'xtatish.
+          Yangi joylangan e'lonlarni ko'rib chiqish, tasdiqlash (faol qilish) yoki nofaol holatga o'tkazish.
         </p>
       </div>
 
@@ -205,13 +223,12 @@
             <th>Dacha nomi & Manzil</th>
             <th>Egasi (Telefon)</th>
             <th>Narx & Sig'im</th>
-            <th>Status</th>
             <th style="text-align: right;">Harakatlar</th>
           </tr>
         </thead>
         <tbody id="adminTableBody">
           <tr>
-            <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+            <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">
               Ma'lumotlar yuklanmoqda...
             </td>
           </tr>
@@ -220,6 +237,112 @@
     </div>
   </main>
 
+  <!-- ==========================================
+       MODAL 1: STATUS CHANGE CONFIRMATION (TASDIQLASH OYNASI)
+       ========================================== -->
+  <div class="modal-backdrop" id="confirmStatusModal">
+    <div class="modal-content" style="max-width: 520px; padding: 1.75rem; border-radius: var(--radius-xl);">
+      <button class="modal-close" onclick="closeConfirmModal()">✕</button>
+      
+      <div style="text-align: center; margin-bottom: 1.25rem;">
+        <div id="confirmIcon" style="font-size: 2.75rem; margin-bottom: 0.5rem;">❓</div>
+        <h3 id="confirmTitle" style="font-size: 1.3rem; font-weight: 800; color: #0f172a;">E'lon holatini o'zgartirish</h3>
+        <p id="confirmSubtitle" style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">Ushbu amalni tasdiqlaysizmi?</p>
+      </div>
+
+      <!-- Dacha mini summary card with image -->
+      <div style="background: var(--bg-page); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.85rem 1rem; display: flex; gap: 1rem; align-items: center; margin-bottom: 1.25rem;">
+        <img id="confirmDachaImg" src="" alt="" style="width: 70px; height: 70px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border);" />
+        <div>
+          <h4 id="confirmDachaName" style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-bottom: 0.2rem;">-</h4>
+          <p id="confirmDachaOwner" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.15rem;">👤 Egasi: -</p>
+          <p id="confirmDachaPrice" style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">💰 Narx: -</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-outline" style="flex: 1; padding: 0.75rem;" onclick="closeConfirmModal()">
+          Bekor qilish
+        </button>
+        <button id="confirmActionBtn" class="btn" style="flex: 1; padding: 0.75rem; font-weight: 800; color: white;" onclick="executeConfirmedStatusChange()">
+          Ha, tasdiqlayman
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 2: DACHA BATAFSIL KO'RISH & MODERATSIYA
+       ========================================== -->
+  <div class="modal-backdrop" id="dachaDetailModal">
+    <div class="modal-content" style="max-width: 880px; padding: 0; max-height: 90vh; overflow-y: auto;">
+      <!-- Header -->
+      <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: white; sticky: top;">
+        <div>
+          <span id="detailStatusBadge" class="status-badge-pending">⏳ Kutilmoqda</span>
+          <h2 id="detailName" style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-top: 0.35rem;">-</h2>
+        </div>
+        <button class="modal-close" style="position: static;" onclick="closeDetailModal()">✕</button>
+      </div>
+
+      <div style="padding: 1.5rem 1.75rem;">
+        <!-- Images Gallery -->
+        <div>
+          <h4 style="font-size: 0.9rem; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 0.5rem;">📸 Rasmlar Galereyasi</h4>
+          <div id="detailGallery" class="gallery-preview">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-top: 1.25rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">📍 Joylashuv</span>
+            <p id="detailLocation" style="font-weight: 700; color: #0f172a; margin-top: 0.2rem;">-</p>
+            <p id="detailAddress" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.1rem;">-</p>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">💰 Narxlar</span>
+            <p id="detailPrices" style="font-weight: 800; color: var(--primary); margin-top: 0.2rem;">-</p>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">👥 Sig'im va Xonalar</span>
+            <p id="detailCapacity" style="font-weight: 700; color: #0f172a; margin-top: 0.2rem;">-</p>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">👤 Dacha Egasi</span>
+            <p id="detailOwner" style="font-weight: 700; color: #0284c7; margin-top: 0.2rem;">-</p>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div style="margin-top: 1.25rem;">
+          <h4 style="font-size: 0.9rem; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 0.4rem;">📝 Tavsif</h4>
+          <p id="detailDescription" style="font-size: 0.9rem; color: var(--dark); line-height: 1.6; background: white; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border);">-</p>
+        </div>
+
+        <!-- Amenities -->
+        <div style="margin-top: 1.25rem;">
+          <h4 style="font-size: 0.9rem; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 0.5rem;">✨ Mavjud Qulayliklar</h4>
+          <div id="detailAmenities" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <!-- Amenities badges -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div style="padding: 1.25rem 1.75rem; border-top: 1px solid var(--border); background: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <button class="btn btn-outline" style="color: #ef4444; border-color: #fca5a5;" onclick="deleteDachaFromDetail()">
+          🗑️ E'lonni butunlay o'chirish
+        </button>
+
+        <div id="detailActionButtons" style="display: flex; gap: 0.5rem;">
+          <!-- Injected via JS based on status -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const API_BASE = '/api';
     let adminToken = localStorage.getItem('oromgo_token') || '';
@@ -227,11 +350,17 @@
     let currentFilter = 'all';
     let searchQuery = '';
     let searchTimer = null;
+    let loadedDachas = [];
+    let currentSelectedDacha = null;
+
+    let pendingAction = {
+      dachaId: null,
+      newStatus: null
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
       // Check auth
       if (!adminToken || !adminUser || (adminUser.role !== 'admin' && adminUser.role !== 'super_admin')) {
-        // Avtomatik admin demo login orqali kirish imkoni
         loginAdminAuto();
         return;
       }
@@ -288,7 +417,7 @@
       const tbody = document.getElementById('adminTableBody');
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center; padding: 3rem;">
+          <td colspan="5" style="text-align: center; padding: 3rem;">
             <div style="display:inline-block; width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
             <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">E'lonlar yuklanmoqda...</p>
           </td>
@@ -306,13 +435,13 @@
 
         if (!res.ok) throw new Error('E\'lonlarni yuklab bo\'lmadi');
         const result = await res.json();
-        const dachas = result.data || [];
+        loadedDachas = result.data || [];
 
-        renderTable(dachas);
+        renderTable(loadedDachas);
       } catch (err) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" style="text-align: center; padding: 2.5rem; color: #ef4444; font-weight: 600;">
+            <td colspan="5" style="text-align: center; padding: 2.5rem; color: #ef4444; font-weight: 600;">
               Ma'lumotlarni yuklashda xatolik yuz berdi.
             </td>
           </tr>
@@ -325,7 +454,7 @@
       if (dachas.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" style="text-align: center; padding: 3.5rem; color: var(--text-muted);">
+            <td colspan="5" style="text-align: center; padding: 3.5rem; color: var(--text-muted);">
               🏖️ Tanlangan holat bo'yicha e'lonlar mavjud emas.
             </td>
           </tr>
@@ -338,51 +467,42 @@
           ? `/storage/${d.media[0].path}`
           : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=400&q=80';
 
-        let statusHtml = '';
-        if (d.status === 'pending') {
-          statusHtml = `<span class="status-badge-pending">⏳ Kutilmoqda</span>`;
-        } else if (d.status === 'active') {
-          statusHtml = `<span class="status-badge-active">🟢 Faol (Saytda)</span>`;
-        } else {
-          statusHtml = `<span class="status-badge-inactive">⏸️ Nofaol</span>`;
-        }
-
         const ownerName = d.owner ? d.owner.name : 'Noma\'lum';
         const ownerPhone = d.owner ? d.owner.phone : '-';
 
         return `
           <tr>
             <td>
-              <img src="${img}" alt="${escapeHtml(d.name)}" style="width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border);" />
+              <img src="${img}" alt="${escapeHtml(d.name)}" onclick="openDachaDetail(${d.id})" style="width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); cursor: pointer;" title="Batafsil ko'rish uchun bosing" />
             </td>
             <td>
-              <div style="font-weight: 800; color: #0f172a; margin-bottom: 0.2rem;">${escapeHtml(d.name)}</div>
+              <div style="font-weight: 800; color: #0f172a; margin-bottom: 0.2rem; cursor: pointer;" onclick="openDachaDetail(${d.id})" title="Batafsil ko'rish uchun bosing">${escapeHtml(d.name)}</div>
               <div style="font-size: 0.8rem; color: var(--text-muted);">📍 ${escapeHtml(d.region || '')}, ${escapeHtml(d.district || '')} ${d.mahalla ? `(${escapeHtml(d.mahalla)})` : ''}</div>
             </td>
             <td>
-              <div style="font-weight: 700; color: #0284c7;">${escapeHtml(ownerName)}</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">📞 ${escapeHtml(ownerPhone)}</div>
+              <div style="font-weight: 700; color: #0284c7; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" onclick="openDachaDetail(${d.id})" title="Dacha egasi va batafsil ma'lumotlarni ko'rish">
+                <span>👤 ${escapeHtml(ownerName)}</span>
+                <span style="font-size: 0.75rem; color: #64748b;">ℹ️</span>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem;">📞 ${escapeHtml(ownerPhone)}</div>
             </td>
             <td>
               <div style="font-weight: 800; color: #0f172a;">${Number(d.weekday_price).toLocaleString()} ${d.currency || 'USD'}</div>
               <div style="font-size: 0.8rem; color: var(--text-muted);">👥 ${d.capacity || 1} kishi | 🚪 ${d.rooms_count || 1} xona</div>
             </td>
-            <td>
-              ${statusHtml}
-            </td>
             <td style="text-align: right;">
-              <div style="display: inline-flex; gap: 0.4rem;">
+              <div style="display: inline-flex; gap: 0.4rem; align-items: center;">
                 ${d.status !== 'active' ? `
-                  <button class="btn" style="background: #16a34a; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 700;" onclick="changeStatus(${d.id}, 'active')">
+                  <button class="btn" style="background: #16a34a; color: white; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700;" onclick="promptStatusChange(${d.id}, 'active')">
                     ✅ Faollashtirish
                   </button>
                 ` : ''}
                 ${d.status !== 'inactive' ? `
-                  <button class="btn" style="background: #eab308; color: #713f12; padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 700;" onclick="changeStatus(${d.id}, 'inactive')">
+                  <button class="btn" style="background: #eab308; color: #713f12; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700;" onclick="promptStatusChange(${d.id}, 'inactive')">
                     ⏸️ Nofaol qilish
                   </button>
                 ` : ''}
-                <button class="btn btn-outline" style="color: #ef4444; border-color: #fca5a5; padding: 0.4rem 0.65rem; font-size: 0.8rem;" onclick="deleteDacha(${d.id})" title="O'chirish">
+                <button class="btn btn-outline" style="color: #ef4444; border-color: #fca5a5; padding: 0.45rem 0.65rem; font-size: 0.8rem;" onclick="deleteDacha(${d.id})" title="O'chirish">
                   🗑️
                 </button>
               </div>
@@ -407,7 +527,64 @@
       }, 350);
     }
 
-    async function changeStatus(id, newStatus) {
+    // ==========================================
+    // CONFIRMATION MODAL LOGIC
+    // ==========================================
+    function promptStatusChange(id, targetStatus) {
+      const d = loadedDachas.find(item => item.id === id);
+      if (!d) return;
+
+      pendingAction.dachaId = id;
+      pendingAction.newStatus = targetStatus;
+
+      const img = (d.media && d.media.length > 0)
+        ? `/storage/${d.media[0].path}`
+        : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=400&q=80';
+
+      document.getElementById('confirmDachaImg').src = img;
+      document.getElementById('confirmDachaName').textContent = d.name;
+      document.getElementById('confirmDachaOwner').textContent = `👤 Egasi: ${d.owner ? d.owner.name : 'Noma\'lum'} (${d.owner ? d.owner.phone : '-'})`;
+      document.getElementById('confirmDachaPrice').textContent = `💰 Narx: ${Number(d.weekday_price).toLocaleString()} ${d.currency || 'USD'}`;
+
+      const iconEl = document.getElementById('confirmIcon');
+      const titleEl = document.getElementById('confirmTitle');
+      const subtitleEl = document.getElementById('confirmSubtitle');
+      const btnEl = document.getElementById('confirmActionBtn');
+
+      if (targetStatus === 'active') {
+        iconEl.textContent = '✅';
+        titleEl.textContent = 'E\'lonni faollashtirmoqchimisiz?';
+        subtitleEl.textContent = 'E\'lon tasdiqlangach, u darhol barcha foydalanuvchilarga saytda ko\'rinadi.';
+        btnEl.textContent = 'Ha, faollashtirilsin';
+        btnEl.style.background = '#16a34a';
+      } else if (targetStatus === 'inactive') {
+        iconEl.textContent = '⏸️';
+        titleEl.textContent = 'E\'lonni nofaol qilmoqchimisiz?';
+        subtitleEl.textContent = 'E\'lon nofaol qilingach, saytdan va qidiruvdan yashiriladi.';
+        btnEl.textContent = 'Ha, nofaol qilinsin';
+        btnEl.style.background = '#eab308';
+        btnEl.style.color = '#713f12';
+      }
+
+      document.getElementById('confirmStatusModal').classList.add('open');
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirmStatusModal').classList.remove('open');
+      pendingAction.dachaId = null;
+      pendingAction.newStatus = null;
+    }
+
+    async function executeConfirmedStatusChange() {
+      if (!pendingAction.dachaId || !pendingAction.newStatus) return;
+
+      const { dachaId, newStatus } = pendingAction;
+      closeConfirmModal();
+
+      await executeStatusUpdate(dachaId, newStatus);
+    }
+
+    async function executeStatusUpdate(id, newStatus) {
       try {
         const res = await fetch(`${API_BASE}/admin/dachas/${id}/status`, {
           method: 'POST',
@@ -418,14 +595,116 @@
           },
           body: JSON.stringify({ status: newStatus })
         });
+
         if (res.ok) {
-          loadAdminData();
+          await loadAdminData();
+          if (currentSelectedDacha && currentSelectedDacha.id === id) {
+            currentSelectedDacha.status = newStatus;
+            renderDetailActionButtons(currentSelectedDacha);
+          }
         } else {
           alert('Statusni o\'zgartirishda xatolik yuz berdi');
         }
       } catch (e) {
         alert('Server bilan bog\'lanishda xatolik');
       }
+    }
+
+    // ==========================================
+    // DACHA DETAIL MODAL LOGIC
+    // ==========================================
+    function openDachaDetail(id) {
+      const d = loadedDachas.find(item => item.id === id);
+      if (!d) return;
+
+      currentSelectedDacha = d;
+
+      document.getElementById('detailName').textContent = d.name;
+
+      // Status Badge
+      const statusBadge = document.getElementById('detailStatusBadge');
+      if (d.status === 'pending') {
+        statusBadge.className = 'status-badge-pending';
+        statusBadge.textContent = '⏳ Moderatsiyada (Kutilmoqda)';
+      } else if (d.status === 'active') {
+        statusBadge.className = 'status-badge-active';
+        statusBadge.textContent = '🟢 Faol (Saytda ko\'rinmoqda)';
+      } else {
+        statusBadge.className = 'status-badge-inactive';
+        statusBadge.textContent = '⏸️ Nofaol / To\'xtatilgan';
+      }
+
+      // Gallery
+      const galleryEl = document.getElementById('detailGallery');
+      if (d.media && d.media.length > 0) {
+        galleryEl.innerHTML = d.media.map(m => `
+          <a href="/storage/${m.path}" target="_blank" title="Kattalashtirib ko'rish">
+            <img src="/storage/${m.path}" alt="${escapeHtml(d.name)}" />
+          </a>
+        `).join('');
+      } else {
+        galleryEl.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">Rasmlar yuklanmagan.</p>`;
+      }
+
+      // Details
+      document.getElementById('detailLocation').textContent = `${d.region || ''}, ${d.district || ''}`;
+      document.getElementById('detailAddress').textContent = `${d.mahalla ? `Mahalla: ${d.mahalla}` : ''} ${d.address ? `| Manzil: ${d.address}` : ''}`;
+      document.getElementById('detailPrices').textContent = `Ish kunlari: ${Number(d.weekday_price).toLocaleString()} ${d.currency || 'USD'} | Dam olish: ${d.weekend_price ? Number(d.weekend_price).toLocaleString() + ' ' + (d.currency || 'USD') : 'Kiritilmagan'}`;
+      document.getElementById('detailCapacity').textContent = `${d.capacity || 1} kishilik | ${d.rooms_count || 1} ta xona`;
+      document.getElementById('detailOwner').textContent = `${d.owner ? d.owner.name : 'Noma\'lum'} (📞 ${d.owner ? d.owner.phone : '-'} | ✉️ ${d.owner ? d.owner.email : '-'})`;
+      document.getElementById('detailDescription').textContent = d.description || 'Tavsif kiritilmagan.';
+
+      // Amenities
+      const amenitiesEl = document.getElementById('detailAmenities');
+      if (d.amenities && d.amenities.length > 0) {
+        amenitiesEl.innerHTML = d.amenities.map(a => `
+          <span style="background: white; border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; color: #0f172a;">
+            ${a.icon || '✨'} ${escapeHtml(a.name)}
+          </span>
+        `).join('');
+      } else {
+        amenitiesEl.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;">Qulayliklar belgilanmagan.</span>`;
+      }
+
+      renderDetailActionButtons(d);
+
+      document.getElementById('dachaDetailModal').classList.add('open');
+    }
+
+    function renderDetailActionButtons(d) {
+      const container = document.getElementById('detailActionButtons');
+      container.innerHTML = `
+        ${d.status !== 'active' ? `
+          <button class="btn" style="background: #16a34a; color: white; padding: 0.55rem 1.15rem; font-size: 0.85rem; font-weight: 700;" onclick="changeStatusFromDetail(${d.id}, 'active')">
+            ✅ Faollashtirish (Saytda chiqarish)
+          </button>
+        ` : ''}
+        ${d.status !== 'inactive' ? `
+          <button class="btn" style="background: #eab308; color: #713f12; padding: 0.55rem 1.15rem; font-size: 0.85rem; font-weight: 700;" onclick="changeStatusFromDetail(${d.id}, 'inactive')">
+            ⏸️ Nofaol qilish
+          </button>
+        ` : ''}
+      `;
+    }
+
+    function closeDetailModal() {
+      document.getElementById('dachaDetailModal').classList.remove('open');
+      currentSelectedDacha = null;
+    }
+
+    async function changeStatusFromDetail(id, status) {
+      await executeStatusUpdate(id, status);
+      const statusNames = { active: 'faollashtirildi (saytda ko\'rinmoqda)', inactive: 'nofaol holatga o\'tkazildi' };
+      alert(`Dacha e'loni muvaffaqiyatli ${statusNames[status]}!`);
+    }
+
+    async function deleteDachaFromDetail() {
+      if (!currentSelectedDacha) return;
+      const id = currentSelectedDacha.id;
+      if (!confirm('Haqiqatan ham ushbu dacha e\'lonini butunlay o\'chirmoqchimisiz?')) return;
+
+      closeDetailModal();
+      await deleteDacha(id);
     }
 
     async function deleteDacha(id) {
