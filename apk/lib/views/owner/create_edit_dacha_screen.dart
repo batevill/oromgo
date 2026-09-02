@@ -34,28 +34,50 @@ class _CreateEditDachaScreenState extends State<CreateEditDachaScreen> {
   final Set<int> _selectedAmenityIds = {};
   bool _isSaving = false;
 
-  final List<String> _regions = [
-    'Toshkent viloyati',
-    'Toshkent shahri',
-    'Jizzax viloyati',
-    'Samarqand viloyati',
-    'Namangan viloyati',
-    'Farg\'ona viloyati',
-    'Andijon viloyati',
-  ];
+  // Fallback bazasi (offline yoki internet sekin bo'lgan holatlar uchun)
+  static const Map<String, Map<String, List<String>>> _defaultHierarchy = {
+    'Toshkent viloyati': {
+      'Bo\'stonliq tumani': ['Yusufxona (Chorvoq)', 'Chimyon (Amirsoy)', 'Sijjak (Bochka)', 'Humson', 'Burchmulla', 'Nanay'],
+      'Parkent tumani': ['Kumushkon', 'So\'qoq', 'Zarkent'],
+      'Qibray tumani': ['Baytqo\'rg\'on', 'O\'nqo\'rg\'on'],
+      'Ohangaron tumani': ['Ertosh', 'Sanam'],
+    },
+    'Jizzax viloyati': {
+      'Zomin tumani': ['O\'riklisoy', 'Duoba', 'Baxmal'],
+      'Baxmal tumani': ['Novqa', 'Baxmal markazi'],
+    },
+    'Toshkent shahri': {
+      'Yunusobod tumani': ['Hasanboy'],
+      'Mirzo Ulug\'bek tumani': ['Qorasuv'],
+    },
+    'Samarqand viloyati': {
+      'Urgut tumani': ['G\'o\'s', 'Chorchinor'],
+      'Samarqand tumani': ['Konigil'],
+    },
+  };
 
-  final List<String> _districts = [
-    'Bo\'stonliq tumani',
-    'Chorvoq',
-    'Yusufxona',
-    'Burchmulla',
-    'Chimyon',
-    'Amirsoy',
-    'Zomin tumani',
-    'Oqtosh',
-    'Parkent tumani',
-    'Qibray tumani',
-  ];
+  Map<String, Map<String, List<String>>> _getMergedHierarchy(Map<String, Map<String, List<String>>> apiHierarchy) {
+    final Map<String, Map<String, List<String>>> merged = {};
+    _defaultHierarchy.forEach((reg, dists) {
+      merged[reg] = Map.from(dists);
+    });
+    apiHierarchy.forEach((reg, dists) {
+      if (!merged.containsKey(reg)) {
+        merged[reg] = {};
+      }
+      dists.forEach((dist, mahallas) {
+        if (!merged[reg]!.containsKey(dist)) {
+          merged[reg]![dist] = [];
+        }
+        for (var m in mahallas) {
+          if (!merged[reg]![dist]!.contains(m)) {
+            merged[reg]![dist]!.add(m);
+          }
+        }
+      });
+    });
+    return merged;
+  }
 
   @override
   void initState() {
@@ -76,15 +98,20 @@ class _CreateEditDachaScreenState extends State<CreateEditDachaScreen> {
     _roomsCountController = TextEditingController(text: d != null ? d.roomsCount.toString() : '4');
 
     if (d != null) {
-      if (_regions.contains(d.region)) {
-        _selectedRegion = d.region;
-      }
-      if (_districts.contains(d.district)) {
-        _selectedDistrict = d.district;
-      }
+      _selectedRegion = d.region;
+      _selectedDistrict = d.district;
       _currency = d.currency;
       _selectedAmenityIds.addAll(d.amenities.map((a) => a.id));
     }
+
+    // Backenddan eng yangi hududlar va qulayliklar ro'yxatini yuklash
+    Future.microtask(() {
+      if (mounted) {
+        final provider = context.read<DachaProvider>();
+        provider.fetchLocations();
+        provider.fetchAmenities();
+      }
+    });
   }
 
   @override
@@ -154,7 +181,22 @@ class _CreateEditDachaScreenState extends State<CreateEditDachaScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.dacha != null;
-    final amenities = context.watch<DachaProvider>().amenities;
+    final dachaProvider = context.watch<DachaProvider>();
+    final amenities = dachaProvider.amenities;
+    final hierarchy = _getMergedHierarchy(dachaProvider.locationsHierarchy);
+
+    final regions = hierarchy.keys.toList();
+    if (!regions.contains(_selectedRegion) && regions.isNotEmpty) {
+      _selectedRegion = regions.first;
+    }
+
+    final districts = _selectedRegion.isNotEmpty && hierarchy.containsKey(_selectedRegion)
+        ? hierarchy[_selectedRegion]!.keys.toList()
+        : <String>[];
+
+    if (!districts.contains(_selectedDistrict) && districts.isNotEmpty) {
+      _selectedDistrict = districts.first;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -193,9 +235,15 @@ class _CreateEditDachaScreenState extends State<CreateEditDachaScreen> {
                     child: _buildDropdown(
                       label: 'Viloyat *',
                       value: _selectedRegion,
-                      items: _regions,
+                      items: regions.isNotEmpty ? regions : [_selectedRegion],
                       onChanged: (v) {
-                        if (v != null) setState(() => _selectedRegion = v);
+                        if (v != null) {
+                          setState(() {
+                            _selectedRegion = v;
+                            final newDists = hierarchy[v]?.keys.toList() ?? [];
+                            _selectedDistrict = newDists.isNotEmpty ? newDists.first : '';
+                          });
+                        }
                       },
                     ),
                   ),
@@ -204,7 +252,7 @@ class _CreateEditDachaScreenState extends State<CreateEditDachaScreen> {
                     child: _buildDropdown(
                       label: 'Tuman / Hudud *',
                       value: _selectedDistrict,
-                      items: _districts,
+                      items: districts.isNotEmpty ? districts : [_selectedDistrict],
                       onChanged: (v) {
                         if (v != null) setState(() => _selectedDistrict = v);
                       },
