@@ -28,6 +28,12 @@
       </a>
 
       <div class="nav-actions">
+        <!-- Admin Panel Button (Visible for admins only) -->
+        <button class="btn" id="adminPanelNavBtn" onclick="openAdminModal()" style="display: none; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; font-weight: 700; gap: 0.4rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);">
+          <span>🛡️</span> <span>Admin Panel</span>
+          <span id="adminPendingBadge" style="background: #ef4444; color: white; padding: 2px 7px; border-radius: 9999px; font-size: 0.72rem; font-weight: 800; display: none;">0</span>
+        </button>
+
         <button class="btn btn-accent" onclick="openOwnerModal()">
           <span>➕</span> E'lon berish
         </button>
@@ -292,6 +298,9 @@
         <button class="btn btn-outline" onclick="loginAsDemo('user')" style="background: var(--bg-page); border-style: dashed;">
           👤 Mijoz (Jasur) sifatida sinab ko'rish
         </button>
+        <button class="btn btn-outline" onclick="loginAsDemo('admin')" style="background: #f5f3ff; border-color: #c4b5fd; color: #6d28d9; border-style: dashed; font-weight: 700;">
+          🛡️ Admin Moderator sifatida sinab ko'rish
+        </button>
       </div>
     </div>
   </div>
@@ -541,8 +550,66 @@
 
 
   <!-- ==========================================
-       FOOTER
+       MODAL: ADMIN MODERATION PANEL
        ========================================== -->
+  <div class="modal-backdrop" id="adminModal">
+    <div class="modal-content admin-modal-content" style="max-width: 1080px; padding: 0;">
+      <div style="padding: 1.5rem 1.75rem 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: white; border-top-left-radius: var(--radius-xl); border-top-right-radius: var(--radius-xl);">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.5rem;">🛡️</span>
+            <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--dark); margin: 0;">Admin Moderatsiya Paneli</h2>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">
+            Dacha e'lonlarini tekshirish, tasdiqlash (faol qilish) va nofaol holatga o'tkazish.
+          </p>
+        </div>
+        <button class="modal-close" style="position: static;" onclick="closeModal('adminModal')">✕</button>
+      </div>
+
+      <div style="padding: 1.25rem 1.75rem; background: var(--bg-page); max-height: 75vh; overflow-y: auto;">
+        <!-- Admin Stats Bar -->
+        <div class="admin-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+          <div class="admin-stat-card" style="background: white; padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border); border-left: 4px solid var(--primary);">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Jami E'lonlar</span>
+            <h3 id="adminStatTotal" style="font-size: 1.6rem; font-weight: 800; color: var(--dark); margin-top: 0.25rem;">0</h3>
+          </div>
+          <div class="admin-stat-card" style="background: white; padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #fef08a; border-left: 4px solid #eab308;">
+            <span style="font-size: 0.8rem; color: #a16207; font-weight: 700; text-transform: uppercase;">⏳ Moderatsiyada</span>
+            <h3 id="adminStatPending" style="font-size: 1.6rem; font-weight: 800; color: #a16207; margin-top: 0.25rem;">0</h3>
+          </div>
+          <div class="admin-stat-card" style="background: white; padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #bbf7d0; border-left: 4px solid #22c55e;">
+            <span style="font-size: 0.8rem; color: #15803d; font-weight: 700; text-transform: uppercase;">🟢 Faol (Saytda)</span>
+            <h3 id="adminStatActive" style="font-size: 1.6rem; font-weight: 800; color: #15803d; margin-top: 0.25rem;">0</h3>
+          </div>
+          <div class="admin-stat-card" style="background: white; padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #fecdd3; border-left: 4px solid #ef4444;">
+            <span style="font-size: 0.8rem; color: #b91c1c; font-weight: 700; text-transform: uppercase;">⏸️ Nofaol / To'xtatilgan</span>
+            <h3 id="adminStatInactive" style="font-size: 1.6rem; font-weight: 800; color: #b91c1c; margin-top: 0.25rem;">0</h3>
+          </div>
+        </div>
+
+        <!-- Filter and Search Bar -->
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="adminFilterTabs">
+            <button class="pill-btn active" onclick="filterAdminDachas(this, 'all')">Barcha e'lonlar</button>
+            <button class="pill-btn" onclick="filterAdminDachas(this, 'pending')" style="color: #a16207; border-color: #fef08a;">⏳ Moderatsiyada</button>
+            <button class="pill-btn" onclick="filterAdminDachas(this, 'active')" style="color: #15803d; border-color: #bbf7d0;">🟢 Faol dachalar</button>
+            <button class="pill-btn" onclick="filterAdminDachas(this, 'inactive')" style="color: #b91c1c; border-color: #fecdd3;">⏸️ Nofaol</button>
+          </div>
+
+          <div style="min-width: 260px;">
+            <input type="text" id="adminSearchInput" class="form-control" placeholder="🔍 Dacha yoki egasini qidirish..." oninput="debounceAdminSearch()" style="padding: 0.5rem 0.85rem; font-size: 0.85rem;" />
+          </div>
+        </div>
+
+        <!-- Dachas List Container -->
+        <div id="adminDachasList" style="display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer style="background: white; border-top: 1px solid var(--border); padding: 3rem 1.5rem 2rem; margin-top: 4rem;">
     <div style="max-width: 1380px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.5rem;">
       <a href="/" class="brand-logo">

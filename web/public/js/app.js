@@ -27,6 +27,10 @@ const state = {
   ownerDachas: [],
   ownerBookings: [],
   activeCabinetTab: 'dachas',
+  adminDachas: [],
+  adminFilter: 'all',
+  adminSearchQuery: '',
+  adminStats: {},
   token: localStorage.getItem('oromgo_token') || '',
   user: JSON.parse(localStorage.getItem('oromgo_user') || 'null'),
 };
@@ -48,6 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('oromgo_user', JSON.stringify(state.user));
     window.history.replaceState({}, document.title, window.location.pathname);
     showToast(`Xush kelibsiz, ${state.user.name}!`, 'success');
+
+    if (state.user.role === 'admin' || state.user.role === 'super_admin') {
+      window.location.href = '/admin';
+      return;
+    }
   }
 
   initApp();
@@ -1105,7 +1114,7 @@ async function handleCreateDacha(e) {
       return;
     }
 
-    showToast('🎉 Yangi dacha e\'loningiz muvaffaqiyatli joylandi!', 'success');
+    showToast('🎉 Yangi dacha e\'loningiz qabul qilindi va moderatsiyaga yuborildi! Administrator tasdiqlagach, saytda ko\'rinadi.', 'success');
     form.reset();
     closeModal('ownerModal');
     loadDachas();
@@ -1648,10 +1657,17 @@ async function loginAsDemo(role = 'owner') {
       localStorage.setItem('oromgo_user', JSON.stringify(state.user));
       updateAuthUI();
       closeModal('authModal');
-      showToast(`${role === 'owner' ? 'Dacha egasi' : 'Mijoz'} sifatida tizimga kirdingiz!`, 'success');
+      const roleTitle = role === 'admin' ? '🛡️ Admin Moderator' : (role === 'owner' ? '🏡 Dacha egasi' : '👤 Mijoz');
+      showToast(`${roleTitle} sifatida tizimga kirdingiz!`, 'success');
       await loadFavorites();
       renderDachas(state.dachas);
       loadNotifications(true);
+
+      // Agar Admin sifatida kirgan bo'lsa, to'g'ridan-to'g'ri /admin sahifasiga o'tadi!
+      if (role === 'admin' || (state.user && (state.user.role === 'admin' || state.user.role === 'super_admin'))) {
+        window.location.href = '/admin';
+        return;
+      }
 
       // Agar avval biror dachani batafsil ko'rmoqchi bo'lgan bo'lsa, o'shani darhol ochib beramiz!
       if (state.pendingDachaId) {
@@ -1691,22 +1707,35 @@ function loginAsDemoOwner() {
 function updateAuthUI() {
   const userBox = document.getElementById('navUserBox');
   const myDachasPillBtn = document.getElementById('myDachasPillBtn');
+  const adminPanelNavBtn = document.getElementById('adminPanelNavBtn');
   if (!userBox) return;
 
-  const isOwner = state.user && (state.user.role === 'owner' || state.user.role === 'admin' || state.user.role === 'super_admin');
+  const isOwner = state.user && (state.user.role === 'owner');
+  const isAdmin = state.user && (state.user.role === 'admin' || state.user.role === 'super_admin');
 
   if (myDachasPillBtn) {
     myDachasPillBtn.style.display = (state.token && isOwner) ? 'inline-block' : 'none';
   }
 
+  if (adminPanelNavBtn) {
+    adminPanelNavBtn.style.display = (state.token && isAdmin) ? 'inline-flex' : 'none';
+    if (isAdmin && state.token) {
+      loadAdminStats();
+    }
+  }
+
   if (state.user && state.token) {
     userBox.innerHTML = `
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        ${isOwner ? `
+        ${isAdmin ? `
+          <button class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: #7c3aed; color: #7c3aed; font-weight: 700; background: #f5f3ff;" onclick="openAdminModal()">
+            🛡️ Admin Kabinet
+          </button>
+        ` : (isOwner ? `
           <button class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: var(--primary); color: var(--primary); font-weight: 700;" onclick="openOwnerCabinetModal('dachas')">
             🗂️ Kabinet
           </button>
-        ` : ''}
+        ` : '')}
         <span style="font-weight: 700; font-size: 0.9rem; color: var(--dark);">👤 ${state.user.name.split(' ')[0]}</span>
         <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="logout()">Chiqish</button>
       </div>
@@ -2160,7 +2189,235 @@ function showToast(message, type = 'success') {
     toast.style.transform = 'translateY(20px)';
     toast.style.opacity = '0';
     setTimeout(() => {
-      if (toast.parentNode) toast.parentNode.removeChild(toast);
+      toast.remove();
     }, 300);
-  }, 3000);
+  }, 4000);
+}
+
+// ==========================================
+// ADMIN MODERATION & STATUS CONTROL SYSTEM
+// ==========================================
+
+let adminSearchDebounceTimer = null;
+
+function openAdminModal() {
+  window.location.href = '/admin';
+}
+
+async function loadAdminStats() {
+  if (!state.token) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/stats`, {
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+    if (res.ok) {
+      const stats = await res.json();
+      state.adminStats = stats;
+      
+      const totalEl = document.getElementById('adminStatTotal');
+      const pendingEl = document.getElementById('adminStatPending');
+      const activeEl = document.getElementById('adminStatActive');
+      const inactiveEl = document.getElementById('adminStatInactive');
+
+      if (totalEl) totalEl.textContent = stats.total || 0;
+      if (pendingEl) pendingEl.textContent = stats.pending || 0;
+      if (activeEl) activeEl.textContent = stats.active || 0;
+      if (inactiveEl) inactiveEl.textContent = stats.inactive || 0;
+
+      const badge = document.getElementById('adminPendingBadge');
+      if (badge) {
+        badge.textContent = stats.pending || 0;
+        badge.style.display = (stats.pending > 0) ? 'inline-block' : 'none';
+      }
+    }
+  } catch (err) {
+    console.error('loadAdminStats error:', err);
+  }
+}
+
+function filterAdminDachas(btn, status) {
+  document.querySelectorAll('#adminFilterTabs .pill-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  state.adminFilter = status;
+  loadAdminDachas(status);
+}
+
+function debounceAdminSearch() {
+  clearTimeout(adminSearchDebounceTimer);
+  adminSearchDebounceTimer = setTimeout(() => {
+    state.adminSearchQuery = document.getElementById('adminSearchInput')?.value || '';
+    loadAdminDachas(state.adminFilter);
+  }, 350);
+}
+
+async function loadAdminDachas(status = state.adminFilter) {
+  const container = document.getElementById('adminDachasList');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+      <div style="display:inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <p style="margin-top: 0.75rem; font-size: 0.9rem; font-weight: 600;">E'lonlar yuklanmoqda...</p>
+    </div>
+  `;
+
+  try {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (state.adminSearchQuery) params.append('q', state.adminSearchQuery);
+
+    const res = await fetch(`${API_BASE}/admin/dachas?${params.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!res.ok) throw new Error('E\'lonlarni yuklashda xatolik');
+    const result = await res.json();
+    state.adminDachas = result.data || [];
+
+    renderAdminDachas(state.adminDachas);
+  } catch (err) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #ef4444; font-weight: 600;">
+        E'lonlar ro'yxatini yuklab bo'lmadi.
+      </div>
+    `;
+  }
+}
+
+function renderAdminDachas(dachas) {
+  const container = document.getElementById('adminDachasList');
+  if (!container) return;
+
+  if (dachas.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 3rem; background: white; border-radius: var(--radius-md); border: 1px dashed var(--border);">
+        <span style="font-size: 2.5rem;">🏖️</span>
+        <h4 style="margin-top: 0.5rem; color: var(--dark); font-weight: 800;">E'lonlar topilmadi</h4>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Tanlangan holat bo'yicha hech qanday dacha mavjud emas.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = dachas.map(d => {
+    const mainImg = (d.media && d.media.length > 0)
+      ? `/storage/${d.media[0].path}`
+      : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=600&q=80';
+
+    let statusBadge = '';
+    if (d.status === 'pending') {
+      statusBadge = `<span style="background: #fef08a; color: #854d0e; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 800;">⏳ KUTILMOQDA (MODERATSIYA)</span>`;
+    } else if (d.status === 'active') {
+      statusBadge = `<span style="background: #bbf7d0; color: #166534; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 800;">🟢 FAOL (SAYTDA KO'RINMOQDA)</span>`;
+    } else {
+      statusBadge = `<span style="background: #fecdd3; color: #991b1b; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 800;">⏸️ NOFAOL / TO'XTATILGAN</span>`;
+    }
+
+    const ownerName = d.owner ? d.owner.name : 'Noma\'lum egasi';
+    const ownerPhone = d.owner ? d.owner.phone : '-';
+
+    return `
+      <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); transition: var(--transition-fast);">
+        <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 280px;">
+          <img src="${mainImg}" alt="${escapeHtml(d.name)}" style="width: 84px; height: 84px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border);" />
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+              <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--dark); margin: 0;">${escapeHtml(d.name)}</h4>
+              ${statusBadge}
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+              📍 ${escapeHtml(d.region || '')}, ${escapeHtml(d.district || '')} ${d.mahalla ? `(${escapeHtml(d.mahalla)})` : ''}
+            </p>
+            <p style="font-size: 0.85rem; color: var(--dark); font-weight: 600;">
+              👤 Egasi: <span style="font-weight: 700; color: #0284c7;">${escapeHtml(ownerName)}</span> (${escapeHtml(ownerPhone)}) | 💰 ${Number(d.weekday_price).toLocaleString()} ${d.currency || 'USD'}
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          ${d.status !== 'active' ? `
+            <button class="btn" style="background: #16a34a; color: white; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700;" onclick="updateAdminDachaStatus(${d.id}, 'active')">
+              ✅ Faollashtirish
+            </button>
+          ` : ''}
+          ${d.status !== 'inactive' ? `
+            <button class="btn" style="background: #eab308; color: #713f12; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700;" onclick="updateAdminDachaStatus(${d.id}, 'inactive')">
+              ⏸️ Nofaol qilish
+            </button>
+          ` : ''}
+          ${d.status !== 'pending' ? `
+            <button class="btn btn-outline" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; font-weight: 600;" onclick="updateAdminDachaStatus(${d.id}, 'pending')" title="Qayta kutilmoqda holatiga o'tkazish">
+              ⏳ Kutilmoqda
+            </button>
+          ` : ''}
+          <button class="btn btn-outline" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; font-weight: 600;" onclick="openDachaDetail(${d.id})">
+            👁️ Ko'rish
+          </button>
+          <button class="btn" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 0.45rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="deleteAdminDacha(${d.id})" title="O'chirish">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function updateAdminDachaStatus(id, newStatus) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/dachas/${id}/status`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      const statusNames = { active: 'Faollashtirildi (Saytda ko\'rinadi)', inactive: 'Nofaol holatga o\'tkazildi', pending: 'Moderatsiyaga qaytarildi' };
+      showToast(`🎉 Dacha e'loni ${statusNames[newStatus] || newStatus}!`, 'success');
+      loadAdminDachas(state.adminFilter);
+      loadAdminStats();
+      loadDachas();
+    } else {
+      showToast(data.message || 'Xatolik yuz berdi', 'error');
+    }
+  } catch (err) {
+    showToast('Server bilan bog\'lanishda xatolik yuz berdi', 'error');
+  }
+}
+
+async function deleteAdminDacha(id) {
+  if (!confirm('Haqiqatan ham ushbu dacha e\'lonini butunlay o\'chirmoqchimisiz?')) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/dachas/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      showToast('Dacha e\'loni butunlay o\'chirildi', 'success');
+      loadAdminDachas(state.adminFilter);
+      loadAdminStats();
+      loadDachas();
+    } else {
+      showToast('O\'chirishda xatolik yuz berdi', 'error');
+    }
+  } catch (err) {
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  }
 }

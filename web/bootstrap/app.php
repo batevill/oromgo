@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (Request $request) => $request->expectsJson() || $request->is('api/*') ? null : route('home'));
         $middleware->alias([
             'role.owner' => \App\Http\Middleware\EnsureUserIsOwner::class,
+            'role.admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

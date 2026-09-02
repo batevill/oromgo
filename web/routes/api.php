@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\Api\Admin\AdminDachaController;
 use App\Http\Controllers\Api\AmenityController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\DachaController;
@@ -35,10 +36,19 @@ Route::get('/amenities', [AmenityController::class, 'index']);
 // Demo test login helper
 Route::post('/demo-login', function (Request $request) {
     $role = $request->input('role', 'owner');
+    $defaultData = [
+        'admin' => ['name' => 'Admin Moderator', 'phone' => '+998900000001'],
+        'owner' => ['name' => 'Alisher Rahimov (Dacha Egasi)', 'phone' => '+998901234567'],
+        'user'  => ['name' => 'Jasur Bekmurodov', 'phone' => '+998909876543'],
+    ];
+
+    $name = $defaultData[$role]['name'] ?? 'Foydalanuvchi';
+    $phone = $defaultData[$role]['phone'] ?? ('+99890' . rand(1000000, 9999999));
+
     $user = \App\Models\User::where('role', $role)->first() 
         ?? \App\Models\User::firstOrCreate(
             ['email' => "demo_{$role}@oromgo.uz"],
-            ['name' => $role === 'owner' ? 'Alisher Rahimov (Dacha Egasi)' : 'Jasur Bekmurodov', 'role' => $role, 'phone' => '+998901234567']
+            ['name' => $name, 'role' => $role, 'phone' => $phone]
         );
     $token = $user->createToken('demo_token')->plainTextToken;
     return response()->json(['token' => $token, 'user' => $user]);
@@ -81,4 +91,15 @@ Route::middleware(['auth:sanctum', 'role.owner'])->prefix('owner')->group(functi
     Route::post('/bookings/{id}/reject', [OwnerBookingController::class, 'reject']);
     Route::post('/dachas/{id}/block-dates', [OwnerBookingController::class, 'blockDates']);
 });
+
+// ==========================================
+// Administrator (Moderatsiya & Status Boshqaruvi)
+// ==========================================
+Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(function () {
+    Route::get('/dachas', [AdminDachaController::class, 'index']);
+    Route::post('/dachas/{id}/status', [AdminDachaController::class, 'updateStatus']);
+    Route::get('/stats', [AdminDachaController::class, 'stats']);
+    Route::delete('/dachas/{id}', [AdminDachaController::class, 'destroy']);
+});
+
 

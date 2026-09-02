@@ -160,7 +160,7 @@ class _CreateEditDachaScreenState extends State<CreateEditDachaScreen> {
             content: Text(
               widget.dacha != null
                   ? '🎉 Dacha ma\'lumotlari muvaffaqiyatli yangilandi!'
-                  : '🎉 Yangi dacha e\'loningiz muvaffaqiyatli joylandi!',
+                  : '🎉 E\'loningiz qabul qilindi va moderatsiyaga yuborildi! Administrator tasdiqlagach, barchaga ko\'rinadi.',
             ),
             backgroundColor: AppColors.success,
           ),

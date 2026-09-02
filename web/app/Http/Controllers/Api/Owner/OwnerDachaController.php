@@ -87,7 +87,7 @@ class OwnerDachaController extends Controller
                 'weekday_price' => $validated['weekday_price'],
                 'weekend_price' => $validated['weekend_price'] ?? null,
                 'currency' => $validated['currency'] ?? 'USD',
-                'status' => 'active',
+                'status' => 'pending',
             ]);
 
             // Qulayliklarni biriktirish
