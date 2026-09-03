@@ -1146,7 +1146,7 @@ async function openOwnerCabinetModal(tab = 'dachas') {
 
   openModal('ownerCabinetModal');
   switchCabinetTab(tab);
-  await Promise.all([loadOwnerDachas(), loadOwnerBookings()]);
+  await Promise.all([loadOwnerDachas(), loadOwnerBookings(), loadOwnerReports()]);
 }
 
 function switchCabinetTab(tab) {
@@ -1155,16 +1155,204 @@ function switchCabinetTab(tab) {
   // Update tab buttons
   document.getElementById('tabOwnerDachasBtn')?.classList.toggle('active', tab === 'dachas');
   document.getElementById('tabOwnerBookingsBtn')?.classList.toggle('active', tab === 'bookings');
+  document.getElementById('tabOwnerReportsBtn')?.classList.toggle('active', tab === 'reports');
   document.getElementById('tabOwnerBlockDatesBtn')?.classList.toggle('active', tab === 'blockDates');
 
   // Update tab views
   const tabDachas = document.getElementById('cabinetTabDachas');
   const tabBookings = document.getElementById('cabinetTabBookings');
+  const tabReports = document.getElementById('cabinetTabReports');
   const tabBlockDates = document.getElementById('cabinetTabBlockDates');
 
   if (tabDachas) tabDachas.style.display = tab === 'dachas' ? 'block' : 'none';
   if (tabBookings) tabBookings.style.display = tab === 'bookings' ? 'block' : 'none';
+  if (tabReports) tabReports.style.display = tab === 'reports' ? 'block' : 'none';
   if (tabBlockDates) tabBlockDates.style.display = tab === 'blockDates' ? 'block' : 'none';
+
+  if (tab === 'reports') {
+    loadOwnerReports();
+  }
+}
+
+async function loadOwnerReports(period = 'this_month') {
+  const container = document.getElementById('ownerReportsContainer');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align: center; padding: 3rem;">
+      <div style="display:inline-block; width: 35px; height: 35px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">Moliyaviy hisobotlar hisoblanmoqda...</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE}/owner/reports?period=${period}`, {
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const report = await res.json();
+      renderOwnerReports(report);
+    } else {
+      container.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Hisobotlarni yuklashda xatolik.</p>`;
+    }
+  } catch (err) {
+    console.error('loadOwnerReports error:', err);
+    container.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Server bilan bog'lanishda xatolik.</p>`;
+  }
+}
+
+function renderOwnerReports(report) {
+  const container = document.getElementById('ownerReportsContainer');
+  if (!container) return;
+
+  const sum = report.summary || {};
+  const sources = report.sources || [];
+  const monthly = report.monthly_trend || [];
+  const dachasBreakdown = report.dachas_breakdown || [];
+
+  container.innerHTML = `
+    <div>
+      <!-- Header & Filter -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--dark); margin: 0;">📊 Moliyaviy va Bandlik Hisoboti</h3>
+          <p style="font-size: 0.825rem; color: var(--text-muted); margin: 0.2rem 0 0;">Davr: <strong>${escapeHtml(report.period_label || '')}</strong></p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">Davr:</label>
+          <select class="form-control" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 700;" onchange="loadOwnerReports(this.value)">
+            <option value="this_month" ${report.period === 'this_month' ? 'selected' : ''}>Shu oy</option>
+            <option value="last_month" ${report.period === 'last_month' ? 'selected' : ''}>O'tgan oy</option>
+            <option value="this_year" ${report.period === 'this_year' ? 'selected' : ''}>Shu yil</option>
+            <option value="all" ${report.period === 'all' ? 'selected' : ''}>Barcha vaqt</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Stat Cards Grid -->
+      <div class="owner-stat-grid">
+        <div class="owner-stat-card" style="border-left: 4px solid #10b981;">
+          <div class="owner-stat-title">💰 Jami daromad (USD)</div>
+          <div class="owner-stat-value" style="color: #10b981;">$${(sum.total_income_usd || 0).toLocaleString()}</div>
+          <div class="owner-stat-sub">Tasdiqlangan bronlar bo'yicha</div>
+        </div>
+
+        <div class="owner-stat-card" style="border-left: 4px solid #3b82f6;">
+          <div class="owner-stat-title">💳 Jami daromad (UZS)</div>
+          <div class="owner-stat-value" style="color: #3b82f6;">${(sum.total_income_uzs || 0).toLocaleString()} so'm</div>
+          <div class="owner-stat-sub">So'mda kelishilgan bronlar</div>
+        </div>
+
+        <div class="owner-stat-card" style="border-left: 4px solid #f59e0b;">
+          <div class="owner-stat-title">📅 Band kunlar soni</div>
+          <div class="owner-stat-value" style="color: #f59e0b;">${sum.total_booked_days || 0} kun</div>
+          <div class="owner-stat-sub">Bandlik darajasi: ${sum.occupancy_rate || 0}%</div>
+        </div>
+
+        <div class="owner-stat-card" style="border-left: 4px solid #8b5cf6;">
+          <div class="owner-stat-title">📋 Tasdiqlangan bronlar</div>
+          <div class="owner-stat-value" style="color: #8b5cf6;">${sum.confirmed_bookings || 0} ta</div>
+          <div class="owner-stat-sub">Jami so'rovlar: ${sum.total_bookings || 0} ta</div>
+        </div>
+      </div>
+
+      <!-- Sources Breakdown & Monthly Trend -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+        <!-- Sources -->
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">📱 Bronlar va Daromad Manbalari</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Telegram yoki ilova orqali qancha daromad topganingiz:</p>
+          <div>
+            ${sources.map(s => {
+              const incomeText = s.income_usd > 0 
+                ? `$${s.income_usd.toLocaleString()}` 
+                : (s.income_uzs > 0 ? `${s.income_uzs.toLocaleString()} so'm` : '0');
+              return `
+                <div class="source-item">
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.5rem;">${s.icon}</span>
+                    <div>
+                      <div style="font-weight: 700; font-size: 0.9rem; color: var(--dark);">${escapeHtml(s.label)}</div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">${s.count} ta bron</div>
+                    </div>
+                  </div>
+                  <div style="text-align: right; font-weight: 800; color: var(--primary); font-size: 0.95rem;">
+                    ${incomeText}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Monthly Trend -->
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">📈 Oylik Daromad Dinamikasi</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">So'nggi oylardagi tushumlar o'sishi:</p>
+          <div>
+            ${monthly.map(m => {
+              const incomeText = m.income_usd > 0 
+                ? `$${m.income_usd.toLocaleString()}` 
+                : (m.income_uzs > 0 ? `${m.income_uzs.toLocaleString()} so'm` : '0');
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px dashed var(--border);">
+                  <span style="font-weight: 700; font-size: 0.85rem; color: var(--dark);">${escapeHtml(m.month_name)}</span>
+                  <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">${m.bookings_count} bron</span>
+                    <strong style="color: var(--primary); font-size: 0.9rem;">${incomeText}</strong>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Dachas Breakdown -->
+      ${dachasBreakdown.length > 0 ? `
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--dark); margin-bottom: 0.75rem;">🏡 Dachalar Kesimida Daromad</h4>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            ${dachasBreakdown.map(d => {
+              const incomeText = d.income_usd > 0 
+                ? `$${d.income_usd.toLocaleString()}` 
+                : (d.income_uzs > 0 ? `${d.income_uzs.toLocaleString()} so'm` : '0');
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                  <div>
+                    <div style="font-weight: 800; font-size: 0.95rem; color: var(--dark);">${escapeHtml(d.name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${d.bookings_count} ta muvaffaqiyatli bron</div>
+                  </div>
+                  <strong style="font-size: 1.05rem; color: var(--primary);">${incomeText}</strong>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function handleManualSourceChange() {
+  const source = document.querySelector('input[name="manualSource"]:checked')?.value || 'telegram';
+  const priceInput = document.getElementById('blockPrice');
+  const reasonInput = document.getElementById('blockReason');
+
+  if (source === 'manual') {
+    if (priceInput) priceInput.placeholder = "0 (Yopish uchun narx shart emas)";
+    if (reasonInput) reasonInput.placeholder = "Masalan: Ta'mir yoki o'zimiz dam olamiz";
+  } else if (source === 'telegram') {
+    if (priceInput) priceInput.placeholder = "Kelishilgan ijara narxi (masalan 1500000)";
+    if (reasonInput) reasonInput.placeholder = "Telegram orqali kelishildi";
+  } else if (source === 'phone') {
+    if (priceInput) priceInput.placeholder = "Kelishilgan ijara narxi (masalan 1500000)";
+    if (reasonInput) reasonInput.placeholder = "Telefon orqali bron qilindi";
+  }
 }
 
 async function loadOwnerDachas() {
@@ -1278,7 +1466,7 @@ function renderOwnerDachasList(dachas) {
                   ✏️ Tahrirlash
                 </button>
                 <button class="btn btn-outline" style="color: #d97706; border-color: #fde68a;" onclick="openBlockDatesForDacha(${dacha.id})">
-                  🚫 Yopish
+                  ➕ Tashqi bron
                 </button>
                 <button class="btn btn-outline" style="color: #ef4444; border-color: #fecaca;" onclick="deleteOwnerDacha(${dacha.id})">
                   🗑️
@@ -1335,7 +1523,7 @@ function renderOwnerBookingsList(bookings) {
       <div style="text-align: center; padding: 3.5rem 1rem; background: white; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
         <div style="font-size: 3rem; margin-bottom: 0.5rem;">📋</div>
         <h4 style="font-size: 1.15rem; font-weight: 800; color: var(--dark); margin-bottom: 0.25rem;">Hozircha bron so'rovlari yo'q</h4>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Mijozlar dachangizni bron qilishganda barcha so'rovlar shu yerda va Telegram botingizda ko'rinadi.</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Mijozlar dachangizni bron qilishganda yoki o'zingiz Telegram orqali kiritganingizda shu yerda ko'rinadi.</p>
       </div>
     `;
     return;
@@ -1343,8 +1531,8 @@ function renderOwnerBookingsList(bookings) {
 
   container.innerHTML = bookings.map(b => {
     const dachaName = b.dacha?.name || 'Dacha';
-    const guestName = b.user?.name || 'Mijoz';
-    const guestPhone = b.user?.phone || 'Kiritilmagan';
+    const guestName = b.user?.name || b.customer_name || 'Mijoz';
+    const guestPhone = b.user?.phone || b.customer_phone || 'Kiritilmagan';
     const startDate = b.start_date ? b.start_date.split('T')[0] : '';
     const endDate = b.end_date ? b.end_date.split('T')[0] : '';
     const totalPrice = parseFloat(b.total_price || 0).toLocaleString();
@@ -1352,6 +1540,15 @@ function renderOwnerBookingsList(bookings) {
     const isPending = b.status === 'pending';
     const isConfirmed = b.status === 'confirmed';
     const isCancelled = b.status === 'cancelled';
+
+    let sourceBadge = `<span style="display:inline-block; font-size:0.75rem; background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:6px; font-weight:700;">🌟 Oromgo</span>`;
+    if (b.source === 'telegram') {
+      sourceBadge = `<span style="display:inline-block; font-size:0.75rem; background:#dbeafe; color:#1d4ed8; padding:2px 8px; border-radius:6px; font-weight:700;">📱 Telegram</span>`;
+    } else if (b.source === 'phone') {
+      sourceBadge = `<span style="display:inline-block; font-size:0.75rem; background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:6px; font-weight:700;">📞 Telefon</span>`;
+    } else if (b.source === 'manual') {
+      sourceBadge = `<span style="display:inline-block; font-size:0.75rem; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-weight:700;">🚫 Yopilgan</span>`;
+    }
 
     let statusBadge = `<span class="notif-type-badge booking_created">Kutilmoqda ⏳</span>`;
     if (isConfirmed) statusBadge = `<span class="notif-type-badge booking_confirmed">Tasdiqlangan ✅</span>`;
@@ -1361,10 +1558,17 @@ function renderOwnerBookingsList(bookings) {
       <div class="owner-booking-card">
         <div class="owner-booking-header">
           <div>
-            <div style="font-weight: 800; font-size: 1.05rem; color: var(--dark);">🏡 ${escapeHtml(dachaName)}</div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--dark); display: flex; align-items: center; gap: 0.5rem;">
+              🏡 ${escapeHtml(dachaName)} ${sourceBadge}
+            </div>
             <div style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.15rem;">Bron raqami: #${b.id} • ${formatTimeAgo(b.created_at)}</div>
           </div>
-          <div>${statusBadge}</div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            ${statusBadge}
+            ${(b.source !== 'app' || isCancelled) ? `
+              <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; color: #ef4444; border-color: #fecaca;" onclick="deleteOwnerBooking(${b.id})" title="O'chirish">🗑️</button>
+            ` : ''}
+          </div>
         </div>
 
         <div class="owner-booking-grid">
@@ -1407,6 +1611,33 @@ function renderOwnerBookingsList(bookings) {
   }).join('');
 }
 
+async function deleteOwnerBooking(bookingId) {
+  if (!confirm('Ushbu bron yoki yopilgan sanalarni o\'chirmoqchimisiz?')) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/owner/bookings/${bookingId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Bron muvaffaqiyatli o\'chirildi.', 'success');
+      await Promise.all([loadOwnerBookings(), loadOwnerReports()]);
+    } else {
+      showToast(data.message || 'O\'chirishda xatolik yuz berdi', 'error');
+    }
+  } catch (err) {
+    console.error('deleteOwnerBooking error:', err);
+    showToast('Server bilan bog\'lanishda xatolik', 'error');
+  }
+}
+
 async function handleOwnerBookingDecisionInCabinet(bookingId, action) {
   try {
     const res = await fetch(`${API_BASE}/owner/bookings/${bookingId}/${action}`, {
@@ -1420,7 +1651,7 @@ async function handleOwnerBookingDecisionInCabinet(bookingId, action) {
     const data = await res.json();
     if (res.ok) {
       showToast(action === 'confirm' ? '🎉 Bron tasdiqlandi!' : 'Bron rad etildi.', 'success');
-      await loadOwnerBookings();
+      await Promise.all([loadOwnerBookings(), loadOwnerReports()]);
       loadNotifications(false);
     } else {
       showToast(data.message || 'Xatolik yuz berdi', 'error');
@@ -1450,6 +1681,7 @@ async function deleteOwnerDacha(dachaId) {
       showToast('Dacha muvaffaqiyatli o\'chirildi.', 'success');
       await loadOwnerDachas();
       loadDachas();
+      loadOwnerReports();
     } else {
       showToast(data.message || 'O\'chirishda xatolik yuz berdi', 'error');
     }
@@ -1475,6 +1707,11 @@ async function handleBlockDatesSubmit(e) {
   const dachaId = document.getElementById('blockDatesDachaSelect')?.value;
   const startDate = document.getElementById('blockStartDate')?.value;
   const endDate = document.getElementById('blockEndDate')?.value;
+  const source = document.querySelector('input[name="manualSource"]:checked')?.value || 'telegram';
+  const price = parseFloat(document.getElementById('blockPrice')?.value || 0);
+  const currency = document.getElementById('blockCurrency')?.value || 'USD';
+  const customerName = document.getElementById('blockCustomerName')?.value;
+  const customerPhone = document.getElementById('blockCustomerPhone')?.value;
   const reason = document.getElementById('blockReason')?.value;
 
   if (!dachaId || !startDate || !endDate) {
@@ -1483,27 +1720,51 @@ async function handleBlockDatesSubmit(e) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/owner/dachas/${dachaId}/block-dates`, {
+    let endpoint = `${API_BASE}/owner/bookings/manual`;
+    let bodyData = {
+      dacha_id: parseInt(dachaId),
+      start_date: startDate,
+      end_date: endDate,
+      total_price: price,
+      currency: currency,
+      source: source,
+      customer_name: customerName || null,
+      customer_phone: customerPhone || null,
+      notes: reason || null
+    };
+
+    if (source === 'manual' && price === 0) {
+      endpoint = `${API_BASE}/owner/dachas/${dachaId}/block-dates`;
+      bodyData = {
+        start_date: startDate,
+        end_date: endDate,
+        reason: reason,
+        total_price: 0,
+        currency: currency,
+        source: 'manual',
+        customer_name: customerName,
+        customer_phone: customerPhone
+      };
+    }
+
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.token}`,
         'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        start_date: startDate,
-        end_date: endDate,
-        reason: reason
-      })
+      body: JSON.stringify(bodyData)
     });
 
     const data = await res.json();
     if (res.ok) {
-      showToast('🔒 Sanalar muvaffaqiyatli band qilib yopildi!', 'success');
+      showToast('🎉 Tashqi bron / Sanalar saqlandi va hisobotga kiritildi!', 'success');
       document.getElementById('ownerBlockDatesForm')?.reset();
-      switchCabinetTab('dachas');
+      await Promise.all([loadOwnerBookings(), loadOwnerReports()]);
+      switchCabinetTab('reports');
     } else {
-      showToast(data.message || 'Sanalarni yopishda xatolik', 'error');
+      showToast(data.message || 'Sanalarni saqlashda xatolik', 'error');
     }
   } catch (err) {
     console.error('handleBlockDatesSubmit error:', err);

@@ -31,4 +31,39 @@ class Booking extends Model
     {
         return $this->hasMany(Notification::class);
     }
+
+    /**
+     * Mijozning ismi (Dastur orqali yoki tashqi kiritilgan)
+     */
+    public function getGuestNameAttribute(): string
+    {
+        if ($this->user) {
+            return $this->user->name;
+        }
+        return $this->customer_name ?: 'Noma\'lum mijoz';
+    }
+
+    /**
+     * Mijozning telefoni
+     */
+    public function getGuestPhoneAttribute(): string
+    {
+        if ($this->user && $this->user->phone) {
+            return $this->user->phone;
+        }
+        return $this->customer_phone ?: '-';
+    }
+
+    /**
+     * Manba nomi (o'zbekcha)
+     */
+    public function getSourceLabelAttribute(): string
+    {
+        return match ($this->source) {
+            'telegram' => 'Telegram 📱',
+            'phone' => 'Telefon 📞',
+            'manual' => 'Qo\'lda / Boshqa 📝',
+            default => 'Oromgo Ilova 🌟',
+        };
+    }
 }

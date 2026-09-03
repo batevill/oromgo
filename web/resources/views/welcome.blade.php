@@ -385,10 +385,13 @@
           🏡 Mening dachalarim (<span id="ownerDachasCount">0</span>)
         </button>
         <button class="cabinet-tab-btn" id="tabOwnerBookingsBtn" onclick="switchCabinetTab('bookings')">
-          📋 Kelgan bronlar (<span id="ownerBookingsCount">0</span>)
+          📋 Bronlar (<span id="ownerBookingsCount">0</span>)
+        </button>
+        <button class="cabinet-tab-btn" id="tabOwnerReportsBtn" onclick="switchCabinetTab('reports')">
+          📊 Hisobotlar & Daromad
         </button>
         <button class="cabinet-tab-btn" id="tabOwnerBlockDatesBtn" onclick="switchCabinetTab('blockDates')">
-          🚫 Sanalarni band qilish (Yopish)
+          ➕ Tashqi bron / Yopish
         </button>
       </div>
 
@@ -408,15 +411,42 @@
           </div>
         </div>
 
-        <!-- Tab 3: Sanalarni yopish formasi -->
+        <!-- Tab 3: Hisobotlar va Daromad statistikasi -->
+        <div id="cabinetTabReports" style="display: none;">
+          <div id="ownerReportsContainer">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Tab 4: Tashqi bron / Sanalarni yopish formasi -->
         <div id="cabinetTabBlockDates" style="display: none;">
-          <div style="max-width: 580px; margin: 0 auto; background: white; padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-            <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--dark);">🚫 Dachani ma'lum sanalarga yopib qo'yish</h3>
-            <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">Tanlangan sanalarda mijozlar dacha band qila olmaydilar (masalan: ta'mirlash yoki o'zingiz dam olganingizda).</p>
+          <div style="max-width: 620px; margin: 0 auto; background: white; padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+            <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.35rem; color: var(--dark);">➕ Tashqi bron kiritish / Sanalarni yopish</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
+              Telegram yoki telefon orqali band qilingan dachani kiritib, daromad hisobotingizni to'liq va to'g'ri yuriting.
+            </p>
             
             <form id="ownerBlockDatesForm">
               <div class="form-group">
-                <label>Dachani tanlang *</label>
+                <label style="font-weight: 700; font-size: 0.85rem;">Bron manbasi *</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem;">
+                  <label class="source-radio-label">
+                    <input type="radio" name="manualSource" value="telegram" checked onchange="handleManualSourceChange()" />
+                    <span>📱 Telegram</span>
+                  </label>
+                  <label class="source-radio-label">
+                    <input type="radio" name="manualSource" value="phone" onchange="handleManualSourceChange()" />
+                    <span>📞 Telefon</span>
+                  </label>
+                  <label class="source-radio-label">
+                    <input type="radio" name="manualSource" value="manual" onchange="handleManualSourceChange()" />
+                    <span>🚫 Yopish / Ta'mir</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight: 700; font-size: 0.85rem;">Dachani tanlang *</label>
                 <select id="blockDatesDachaSelect" class="form-control" required>
                   <!-- Injected via JS -->
                 </select>
@@ -424,22 +454,47 @@
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div class="form-group">
-                  <label>Boshlanish sanasi *</label>
+                  <label style="font-weight: 700; font-size: 0.85rem;">Boshlanish sanasi *</label>
                   <input type="date" id="blockStartDate" class="form-control" required />
                 </div>
                 <div class="form-group">
-                  <label>Tugash sanasi *</label>
+                  <label style="font-weight: 700; font-size: 0.85rem;">Tugash sanasi *</label>
                   <input type="date" id="blockEndDate" class="form-control" required />
                 </div>
               </div>
 
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label style="font-weight: 700; font-size: 0.85rem;">Kelishilgan narx</label>
+                  <input type="number" id="blockPrice" class="form-control" placeholder="Masalan: 1500000" min="0" />
+                </div>
+                <div class="form-group">
+                  <label style="font-weight: 700; font-size: 0.85rem;">Valyuta</label>
+                  <select id="blockCurrency" class="form-control">
+                    <option value="USD">USD ($)</option>
+                    <option value="UZS">UZS (so'm)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label style="font-weight: 700; font-size: 0.85rem;">Mijoz ismi (Ixtiyoriy)</label>
+                  <input type="text" id="blockCustomerName" class="form-control" placeholder="Masalan: Jasur" />
+                </div>
+                <div class="form-group">
+                  <label style="font-weight: 700; font-size: 0.85rem;">Telefon raqam</label>
+                  <input type="text" id="blockCustomerPhone" class="form-control" placeholder="+998901234567" />
+                </div>
+              </div>
+
               <div class="form-group">
-                <label>Yopish sababi (Ixtiyoriy)</label>
-                <input type="text" id="blockReason" class="form-control" placeholder="Masalan: Ta'mirlash ishlari yoki o'zimiz dam olamiz" />
+                <label style="font-weight: 700; font-size: 0.85rem;">Izoh / Sabab</label>
+                <input type="text" id="blockReason" class="form-control" placeholder="Masalan: Telegram orqali bron qilindi" />
               </div>
 
               <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 0.95rem; margin-top: 0.5rem;">
-                🔒 Sanalarni yopish
+                💾 Saqlash va Hisobotga kiritish
               </button>
             </form>
           </div>

@@ -27,10 +27,13 @@ class ApiConstants {
 
   // Owner Actions
   static const String ownerBookings = '/owner/bookings';
+  static const String ownerManualBooking = '/owner/bookings/manual';
+  static String ownerDeleteBooking(int id) => '/owner/bookings/$id';
   static String ownerConfirmBooking(int id) => '/owner/bookings/$id/confirm';
   static String ownerRejectBooking(int id) => '/owner/bookings/$id/reject';
   static String ownerBlockDates(int dachaId) => '/owner/dachas/$dachaId/block-dates';
   static const String ownerDachas = '/owner/dachas';
+  static const String ownerReports = '/owner/reports';
 
   // Auth & User
   static const String userProfile = '/user';

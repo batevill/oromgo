@@ -44,6 +44,9 @@ class BookingModel {
   final int guestsCount;
   final String? notes;
   final String status; // pending, confirmed, cancelled, completed
+  final String source; // app, telegram, phone, manual
+  final String? customerName;
+  final String? customerPhone;
   final String? createdAt;
   final DachaModel? dacha;
   final UserModel? user;
@@ -59,6 +62,9 @@ class BookingModel {
     required this.guestsCount,
     this.notes,
     required this.status,
+    this.source = 'app',
+    this.customerName,
+    this.customerPhone,
     this.createdAt,
     this.dacha,
     this.user,
@@ -67,6 +73,31 @@ class BookingModel {
   bool get isPending => status == 'pending';
   bool get isConfirmed => status == 'confirmed';
   bool get isCancelled => status == 'cancelled';
+
+  String get clientName {
+    if (user != null && user!.name.isNotEmpty) return user!.name;
+    if (customerName != null && customerName!.isNotEmpty) return customerName!;
+    return 'Noma\'lum mijoz';
+  }
+
+  String get clientPhone {
+    if (user != null && user!.phone.isNotEmpty) return user!.phone;
+    if (customerPhone != null && customerPhone!.isNotEmpty) return customerPhone!;
+    return '-';
+  }
+
+  String get sourceLabel {
+    switch (source) {
+      case 'telegram':
+        return 'Telegram 📱';
+      case 'phone':
+        return 'Telefon 📞';
+      case 'manual':
+        return 'Qo\'lda 📝';
+      default:
+        return 'Oromgo 🌟';
+    }
+  }
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
@@ -80,6 +111,9 @@ class BookingModel {
       guestsCount: int.tryParse(json['guests_count']?.toString() ?? '1') ?? 1,
       notes: json['notes'],
       status: json['status'] ?? 'pending',
+      source: json['source'] ?? 'app',
+      customerName: json['customer_name'],
+      customerPhone: json['customer_phone'],
       createdAt: json['created_at'],
       dacha: json['dacha'] != null ? DachaModel.fromJson(json['dacha']) : null,
       user: json['user'] != null ? UserModel.fromJson(json['user']) : null,

@@ -89,11 +89,14 @@ Route::middleware(['auth:sanctum', 'role.owner'])->prefix('owner')->group(functi
     Route::post('/dachas/{id}/media', [OwnerDachaController::class, 'uploadMedia']);
     Route::delete('/media/{mediaId}', [OwnerDachaController::class, 'deleteMedia']);
 
-    // Bronlar va Sanalarni yopish
+    // Bronlar, Tashqi bronlar, Hisobotlar va Sanalarni yopish
     Route::get('/bookings', [OwnerBookingController::class, 'index']);
+    Route::post('/bookings/manual', [OwnerBookingController::class, 'manualBooking']);
+    Route::delete('/bookings/{id}', [OwnerBookingController::class, 'destroy']);
     Route::post('/bookings/{id}/confirm', [OwnerBookingController::class, 'confirm']);
     Route::post('/bookings/{id}/reject', [OwnerBookingController::class, 'reject']);
     Route::post('/dachas/{id}/block-dates', [OwnerBookingController::class, 'blockDates']);
+    Route::get('/reports', [OwnerBookingController::class, 'reports']);
 });
 
 // ==========================================
