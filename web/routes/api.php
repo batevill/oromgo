@@ -74,6 +74,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::get('/telegram/bot-link', [NotificationController::class, 'getTelegramBotLink']);
+
+    // Adminga Murojaat (Support Chat)
+    Route::get('/support/messages', [\App\Http\Controllers\Api\SupportController::class, 'getMessages']);
+    Route::post('/support/messages', [\App\Http\Controllers\Api\SupportController::class, 'sendMessage']);
 });
 
 // ==========================================
@@ -93,13 +97,18 @@ Route::middleware(['auth:sanctum', 'role.owner'])->prefix('owner')->group(functi
 });
 
 // ==========================================
-// Administrator (Moderatsiya & Status Boshqaruvi)
+// Administrator (Moderatsiya & Status & Support Chat)
 // ==========================================
 Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(function () {
     Route::get('/dachas', [AdminDachaController::class, 'index']);
     Route::post('/dachas/{id}/status', [AdminDachaController::class, 'updateStatus']);
     Route::get('/stats', [AdminDachaController::class, 'stats']);
     Route::delete('/dachas/{id}', [AdminDachaController::class, 'destroy']);
+
+    // Admin Support Chat Endpoints
+    Route::get('/support/chats', [\App\Http\Controllers\Api\SupportController::class, 'adminGetConversations']);
+    Route::get('/support/chats/{userId}', [\App\Http\Controllers\Api\SupportController::class, 'adminGetMessages']);
+    Route::post('/support/chats/{userId}/reply', [\App\Http\Controllers\Api\SupportController::class, 'adminReply']);
 });
 
 

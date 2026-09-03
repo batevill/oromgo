@@ -15,6 +15,10 @@ Route::get('/admin', function () {
     return view('admin');
 })->name('admin');
 
+Route::get('/support', function () {
+    return view('support');
+})->name('support');
+
 Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider'])->name('auth.redirect');
 Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback'])->name('auth.callback');
 

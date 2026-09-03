@@ -28,11 +28,10 @@
       </a>
 
       <div class="nav-actions">
-        <!-- Admin Panel Button (Visible for admins only) -->
-        <button class="btn" id="adminPanelNavBtn" onclick="openAdminModal()" style="display: none; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; font-weight: 700; gap: 0.4rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);">
-          <span>🛡️</span> <span>Admin Panel</span>
-          <span id="adminPendingBadge" style="background: #ef4444; color: white; padding: 2px 7px; border-radius: 9999px; font-size: 0.72rem; font-weight: 800; display: none;">0</span>
-        </button>
+        <!-- Support Chat Button for users -->
+        <a href="/support" class="btn btn-outline" style="padding: 0.5rem 0.95rem; font-size: 0.875rem; font-weight: 700; border-color: #0d9488; color: #0d9488; display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+          <span>💬</span> <span>Adminga murojaat</span>
+        </a>
 
         <button class="btn btn-accent" onclick="openOwnerModal()">
           <span>➕</span> E'lon berish
