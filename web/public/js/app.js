@@ -1131,7 +1131,7 @@ async function handleCreateDacha(e) {
 // OWNER CABINET & DASHBOARD LOGIC
 // ==========================================
 
-async function openOwnerCabinetModal(tab = 'dachas') {
+async function openOwnerCabinetModal(tab = 'reports') {
   if (!state.token) {
     state.pendingAction = 'open_owner_cabinet';
     openAuthModal('Dacha egasi kabinetiga kirish uchun iltimos, avval tizimga kiring.');
@@ -1144,9 +1144,7 @@ async function openOwnerCabinetModal(tab = 'dachas') {
     return;
   }
 
-  openModal('ownerCabinetModal');
-  switchCabinetTab(tab);
-  await Promise.all([loadOwnerDachas(), loadOwnerBookings(), loadOwnerReports()]);
+  window.location.href = '/owner';
 }
 
 function switchCabinetTab(tab) {
@@ -1930,6 +1928,12 @@ async function loginAsDemo(role = 'owner') {
         return;
       }
 
+      // Agar Dacha Egasi sifatida kirgan bo'lsa, to'g'ridan-to'g'ri /owner boshqaruv paneliga o'tadi!
+      if (role === 'owner') {
+        window.location.href = '/owner';
+        return;
+      }
+
       // Agar avval biror dachani batafsil ko'rmoqchi bo'lgan bo'lsa, o'shani darhol ochib beramiz!
       if (state.pendingDachaId) {
         const targetId = state.pendingDachaId;
@@ -1949,7 +1953,7 @@ async function loginAsDemo(role = 'owner') {
       if (state.pendingAction === 'open_owner_cabinet') {
         state.pendingAction = null;
         if (state.user && (state.user.role === 'owner' || state.user.role === 'admin' || state.user.role === 'super_admin')) {
-          openOwnerCabinetModal('dachas');
+          window.location.href = '/owner';
         }
       }
     } else {
@@ -1989,13 +1993,13 @@ function updateAuthUI() {
     userBox.innerHTML = `
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         ${isAdmin ? `
-          <button class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: #7c3aed; color: #7c3aed; font-weight: 700; background: #f5f3ff;" onclick="openAdminModal()">
+          <a href="/admin" class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: #7c3aed; color: #7c3aed; font-weight: 700; background: #f5f3ff; text-decoration: none;">
             🛡️ Admin Kabinet
-          </button>
+          </a>
         ` : (isOwner ? `
-          <button class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: var(--primary); color: var(--primary); font-weight: 700;" onclick="openOwnerCabinetModal('dachas')">
+          <a href="/owner" class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: var(--primary); color: var(--primary); font-weight: 700; text-decoration: none;">
             🗂️ Kabinet
-          </button>
+          </a>
         ` : '')}
         <span style="font-weight: 700; font-size: 0.9rem; color: var(--dark);">👤 ${state.user.name.split(' ')[0]}</span>
         <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="logout()">Chiqish</button>
