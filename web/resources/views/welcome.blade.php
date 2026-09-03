@@ -142,7 +142,7 @@
     <div id="mapViewContainer" style="display: none; border-radius: var(--radius-xl); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--glass-shadow);">
       <div id="mainMap" style="width: 100%; height: 650px;"></div>
     </div>
-  </main>
+  </main> 
 
   <!-- Floating Map Toggle Button (Airbnb Style) -->
   <div class="floating-map-btn-container">
