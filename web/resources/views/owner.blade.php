@@ -385,6 +385,13 @@
           <div id="formStagedVideoContainer" style="margin-top: 0.75rem; display: none;"></div>
         </div>
 
+
+        <!-- Progress Bar Container -->
+        <div id="uploadProgressContainer" style="display: none; margin-top: 1rem; background: #e2e8f0; border-radius: 8px; overflow: hidden; height: 24px; position: relative;">
+          <div id="uploadProgressBar" style="height: 100%; width: 0%; background: #10b981; transition: width 0.2s;"></div>
+          <div id="uploadProgressText" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: #0f172a;">0%</div>
+        </div>
+
         <button type="submit" id="btnSaveDachaSubmit" class="btn btn-primary" style="width: 100%; padding: 0.95rem; font-size: 1rem; font-weight: 800; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
           <span>💾 Saqlash</span>
         </button>

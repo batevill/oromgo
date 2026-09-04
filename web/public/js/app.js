@@ -705,12 +705,14 @@ function renderDachaDetail(dacha, reviewsData = { reviews: [], avg_rating: 5.0, 
   const currencySymbol = dacha.currency === 'UZS' ? 'so\'m' : '$';
 
   const images = dacha.media && dacha.media.length > 0 
-    ? dacha.media.map(m => m.url) 
+    ? dacha.media.filter(m => m.type !== 'video').map(m => m.url) 
     : ['/storage/dachas/images/dacha_1_1.jpg'];
 
-  const mainImg = images[0];
-  const thumb1 = images[1] || mainImg;
-  const thumb2 = images[2] || thumb1;
+  const videos = dacha.media && dacha.media.length > 0 
+    ? dacha.media.filter(m => m.type === 'video').map(m => m.url) 
+    : [];
+
+  const mainImg = images[0] || '/storage/dachas/images/dacha_1_1.jpg';
 
   const today = new Date().toISOString().split('T')[0];
   const weekdayPrice = parseFloat(dacha.weekday_price || dacha.default_price || 0);
@@ -723,12 +725,25 @@ function renderDachaDetail(dacha, reviewsData = { reviews: [], avg_rating: 5.0, 
   const isFavDetail = state.favoriteIds.includes(Number(dacha.id));
 
   content.innerHTML = `
-    <div class="detail-gallery">
-      <img src="${mainImg}" class="detail-main-img" id="detailMainImg" alt="${dacha.name}" />
-      <div class="detail-thumb-grid">
-        <img src="${thumb1}" alt="Photo 2" onclick="switchMainImage('${thumb1}')" />
-        <img src="${thumb2}" alt="Photo 3" onclick="switchMainImage('${thumb2}')" />
+    <div style="position: relative; margin-bottom: 1.5rem;">
+      <img src="${mainImg}" class="detail-main-img" id="detailMainImg" alt="${dacha.name}" style="width: 100%; height: 400px; object-fit: cover; border-radius: var(--radius-lg);" />
+      
+      <div style="position: absolute; bottom: 15px; right: 15px; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        ${images.length > 1 ? `
+          <button onclick="expandDachaGallery()" style="background: white; color: var(--dark); border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer;">
+            📷 Barcha rasmlarni ko'rish (${images.length})
+          </button>
+        ` : ''}
+        
+        ${videos.length > 0 ? `
+          <button onclick="expandDachaVideo()" style="background: #8b5cf6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer;">
+            🎬 Videoni ko'rish
+          </button>
+        ` : ''}
       </div>
+      
+      <div id="expandedGalleryContainer" style="display: none; margin-top: 1rem; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem;"></div>
+      <div id="expandedVideoContainer" style="display: none; margin-top: 1rem;"></div>
     </div>
 
     <div class="detail-body">
@@ -2686,3 +2701,25 @@ async function deleteAdminDacha(id) {
     showToast('Server bilan bog\'lanishda xatolik', 'error');
   }
 }
+
+window.expandDachaGallery = function() {
+  const dacha = state.currentDacha;
+  if (!dacha || !dacha.media) return;
+  const images = dacha.media.filter(m => m.type !== 'video').map(m => m.url);
+  const container = document.getElementById('expandedGalleryContainer');
+  if (container) {
+    container.style.display = 'grid';
+    container.innerHTML = images.map(img => `<img src="${img}" style="width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="switchMainImage('${img}')" />`).join('');
+  }
+};
+
+window.expandDachaVideo = function() {
+  const dacha = state.currentDacha;
+  if (!dacha || !dacha.media) return;
+  const videos = dacha.media.filter(m => m.type === 'video').map(m => m.url);
+  const container = document.getElementById('expandedVideoContainer');
+  if (container && videos.length > 0) {
+    container.style.display = 'block';
+    container.innerHTML = `<video src="${videos[0]}" controls autoplay style="width:100%; max-height:400px; border-radius:8px; background:black;"></video>`;
+  }
+};

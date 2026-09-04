@@ -562,22 +562,67 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-    function handleImageInputFiles(files) {
+    async function compressImageToWebP(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            let width = img.width;
+            let height = img.height;
+            const MAX_WIDTH = 1920;
+            const MAX_HEIGHT = 1080;
+            
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                 resolve(file); 
+                 return;
+              }
+              const newName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+              const newFile = new File([blob], newName, {
+                type: 'image/webp',
+                lastModified: Date.now()
+              });
+              resolve(newFile);
+            }, 'image/webp', 0.85); 
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleImageInputFiles(files) {
       if (!files || files.length === 0) return;
 
       const maxLimit = 10;
       let addedCount = 0;
+      
+      showToast('Rasmlar siqilmoqda (WebP), kuting...', 'info');
 
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        let file = files[i];
 
         if (!file.type.startsWith('image/')) {
           showToast(`"${file.name}" rasm fayli emas!`, 'error');
-          continue;
-        }
-
-        if (file.size > 10 * 1024 * 1024) {
-          showToast(`"${file.name}" 10 MB dan katta (Hajmi: ${formatFileSize(file.size)})`, 'error');
           continue;
         }
 
@@ -586,21 +631,21 @@
           break;
         }
 
-        // Duplicate check by name & size
-        const exists = stagedImages.some(f => f.name === file.name && f.size === file.size);
+        const baseName = file.name.replace(/\.[^/.]+$/, "");
+        const exists = stagedImages.some(f => f.name.replace(/\.[^/.]+$/, "") === baseName);
         if (!exists) {
+          file = await compressImageToWebP(file);
           stagedImages.push(file);
           addedCount++;
         }
       }
 
-      // Reset file input so same file can be re-selected if removed
       const fileInput = document.getElementById('formDachaImages');
       if (fileInput) fileInput.value = '';
 
       renderStagedImagePreviews();
       if (addedCount > 0) {
-        showToast(`${addedCount} ta yangi rasm qo'shildi`, 'success');
+        showToast(`${addedCount} ta rasm siqildi va tayyor`, 'success');
       }
     }
 
@@ -823,53 +868,75 @@
       formData.append('weekday_price', document.getElementById('formDachaWeekdayPrice').value);
       formData.append('weekend_price', document.getElementById('formDachaWeekendPrice').value);
 
-      // Add all staged multi-images
       for (let i = 0; i < stagedImages.length; i++) {
         formData.append('images[]', stagedImages[i]);
       }
-
-      // Add staged video if exists
       if (stagedVideo) {
         formData.append('videos[]', stagedVideo);
       }
-
       if (editId) {
         formData.append('_method', 'PUT');
       }
 
-      // Show interactive loading state
       const originalBtnHtml = submitBtn.innerHTML;
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span class="spinner-loading"></span> <span>Google Drive-ga saqlanmoqda (${stagedImages.length} ta rasm)...</span>`;
+      submitBtn.innerHTML = `<span class="spinner-loading"></span> <span>Yuklanmoqda... Kuting</span>`;
 
-      try {
-        const url = editId ? `${API_BASE}/owner/dachas/${editId}` : `${API_BASE}/owner/dachas`;
+      const progressContainer = document.getElementById('uploadProgressContainer');
+      const progressBar = document.getElementById('uploadProgressBar');
+      const progressText = document.getElementById('uploadProgressText');
+      if (progressContainer) {
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+      }
 
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-          body: formData
-        });
+      const url = editId ? `${API_BASE}/owner/dachas/${editId}` : `${API_BASE}/owner/dachas`;
 
-        const data = await res.json();
-        if (res.ok) {
-          showToast(editId ? 'Dacha va rasmlar yangilandi!' : 'Dacha va barcha rasmlar Google Drive-ga muvaffaqiyatli saqlandi! 🎉', 'success');
-          closeModal('dachaFormModal');
-          
-          // Clear staging
-          stagedImages = [];
-          stagedVideo = null;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('Accept', 'application/json');
 
-          await Promise.all([loadDachasData(), loadReportsData()]);
-        } else {
-          showToast(data.message || 'Saqlashda xatolik yuz berdi', 'error');
+      xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          const loadedMB = (e.loaded / (1024 * 1024)).toFixed(1);
+          const totalMB = (e.total / (1024 * 1024)).toFixed(1);
+          if (progressBar) progressBar.style.width = percentComplete + '%';
+          if (progressText) progressText.textContent = `${percentComplete}% (${loadedMB}MB / ${totalMB}MB)`;
         }
-      } catch (err) {
-        showToast('Server xatosi yuz berdi', 'error');
-      } finally {
+      });
+
+      xhr.onload = async function() {
+        if (progressContainer) progressContainer.style.display = 'none';
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnHtml;
-      }
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          showToast(editId ? 'Dacha va rasmlar yangilandi!' : 'Dacha va barcha rasmlar Google Drive-ga muvaffaqiyatli saqlandi! 🎉', 'success');
+          closeModal('dachaFormModal');
+          stagedImages = [];
+          stagedVideo = null;
+          await Promise.all([loadDachasData(), loadReportsData()]);
+        } else {
+          try {
+             const data = JSON.parse(xhr.responseText);
+             showToast(data.message || 'Saqlashda xatolik yuz berdi', 'error');
+          } catch(e) {
+             showToast('Saqlashda xatolik yuz berdi', 'error');
+          }
+        }
+      };
+
+      xhr.onerror = function() {
+        if (progressContainer) progressContainer.style.display = 'none';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHtml;
+        showToast('Server xatosi yuz berdi', 'error');
+      };
+
+      xhr.send(formData);
     }
 
     async function deleteDachaMedia(mediaId, dachaId) {
