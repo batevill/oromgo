@@ -771,7 +771,7 @@
       container.innerHTML = `
         <div class="owner-dacha-grid">
           ${dachas.map(d => {
-            const firstImg = d.media && d.media.length > 0 ? d.media[0].url : '/storage/dachas/images/dacha_1_1.jpg';
+            const firstImg = d.media && d.media.length > 0 ? (d.media[0].thumbnail_url || d.media[0].url) : '/storage/dachas/images/dacha_1_1.jpg';
             const curr = d.currency === 'UZS' ? 'so\'m' : '$';
             const statusBadge = d.status === 'active' 
               ? '<span class="badge" style="background:#10b981; color:white; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:800;">● Faol</span>'

@@ -12,7 +12,7 @@ class DachaMedia extends Model
 
     protected $guarded = [];
 
-    protected $appends = ['url'];
+    protected $appends = ['url', 'thumbnail_url'];
 
     public function dacha()
     {
@@ -26,5 +26,22 @@ class DachaMedia extends Model
         }
 
         return asset('storage/' . ltrim($this->path, '/'));
+    }
+
+    public function getThumbnailUrlAttribute(): string
+    {
+        if ($this->type === 'video' || filter_var($this->path, FILTER_VALIDATE_URL)) {
+            return $this->url;
+        }
+
+        $dir = dirname($this->path);
+        $filename = basename($this->path);
+        $thumbPath = ($dir === '.' ? '' : $dir . '/') . 'thumb_' . $filename;
+
+        if (Storage::disk('public')->exists($thumbPath)) {
+            return asset('storage/' . $thumbPath);
+        }
+
+        return $this->url;
     }
 }

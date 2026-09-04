@@ -5,12 +5,19 @@ namespace App\Http\Controllers\Api\Owner;
 use App\Http\Controllers\Controller;
 use App\Models\Dacha;
 use App\Models\DachaMedia;
+use App\Services\ImageOptimizerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class OwnerDachaController extends Controller
 {
+    protected ImageOptimizerService $imageOptimizer;
+
+    public function __construct(ImageOptimizerService $imageOptimizer)
+    {
+        $this->imageOptimizer = $imageOptimizer;
+    }
     /**
      * Dacha egasining barcha e'lonlari ro'yxati
      */
@@ -97,10 +104,10 @@ class OwnerDachaController extends Controller
                 $dacha->amenities()->sync($validated['amenities']);
             }
 
-            // Rasmlarni saqlash
+            // Rasmlarni avtomatik WebP ga o'tkazish, siqish va saqlash
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
-                    $path = $image->store('dachas/images', 'public');
+                    $path = $this->imageOptimizer->optimizeAndStore($image, 'dachas/images');
                     $dacha->media()->create([
                         'type' => 'image',
                         'path' => $path,
@@ -201,10 +208,10 @@ class OwnerDachaController extends Controller
                 $dacha->amenities()->sync($request->amenities ?? []);
             }
 
-            // Yangi rasmlar qo'shish
+            // Yangi rasmlarni WebP ga o'tkazish va qo'shish
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
-                    $path = $image->store('dachas/images', 'public');
+                    $path = $this->imageOptimizer->optimizeAndStore($image, 'dachas/images');
                     $dacha->media()->create([
                         'type' => 'image',
                         'path' => $path,
@@ -238,6 +245,12 @@ class OwnerDachaController extends Controller
         $dacha = $this->findOwnerDacha($request, $id);
 
         foreach ($dacha->media as $media) {
+            $dir = dirname($media->path);
+            $filename = basename($media->path);
+            $thumbPath = ($dir === '.' ? '' : $dir . '/') . 'thumb_' . $filename;
+            if (Storage::disk('public')->exists($thumbPath)) {
+                Storage::disk('public')->delete($thumbPath);
+            }
             if (Storage::disk('public')->exists($media->path)) {
                 Storage::disk('public')->delete($media->path);
             }
@@ -268,7 +281,7 @@ class OwnerDachaController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $path = $image->store('dachas/images', 'public');
+                $path = $this->imageOptimizer->optimizeAndStore($image, 'dachas/images');
                 $media = $dacha->media()->create([
                     'type' => 'image',
                     'path' => $path,
@@ -306,6 +319,12 @@ class OwnerDachaController extends Controller
             return response()->json(['message' => 'Ruxsat berilmagan'], 403);
         }
 
+        $dir = dirname($media->path);
+        $filename = basename($media->path);
+        $thumbPath = ($dir === '.' ? '' : $dir . '/') . 'thumb_' . $filename;
+        if (Storage::disk('public')->exists($thumbPath)) {
+            Storage::disk('public')->delete($thumbPath);
+        }
         if (Storage::disk('public')->exists($media->path)) {
             Storage::disk('public')->delete($media->path);
         }

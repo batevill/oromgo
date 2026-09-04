@@ -290,7 +290,7 @@ function renderDachas(dachas) {
 
   grid.innerHTML = dachas.map(dacha => {
     const firstImg = dacha.media && dacha.media.length > 0 
-      ? dacha.media[0].url 
+      ? (dacha.media[0].thumbnail_url || dacha.media[0].url) 
       : '/storage/dachas/images/dacha_1_1.jpg';
 
     const currencySymbol = dacha.currency === 'UZS' ? 'so\'m' : '$';
@@ -395,7 +395,7 @@ function updateMapMarkers(dachas) {
     const marker = L.marker([lat, lng], { icon }).addTo(state.markersLayer);
 
     const firstImg = dacha.media && dacha.media.length > 0 
-      ? dacha.media[0].url 
+      ? (dacha.media[0].thumbnail_url || dacha.media[0].url) 
       : '/storage/dachas/images/dacha_1_1.jpg';
 
     const avgRating = dacha.avg_rating ? parseFloat(dacha.avg_rating).toFixed(1) : '5.0';
@@ -1422,7 +1422,7 @@ function renderOwnerDachasList(dachas) {
     <div class="owner-dacha-grid">
       ${dachas.map(dacha => {
         const firstImg = dacha.media && dacha.media.length > 0 
-          ? dacha.media[0].url 
+          ? (dacha.media[0].thumbnail_url || dacha.media[0].url) 
           : '/storage/dachas/images/dacha_1_1.jpg';
         const currencySymbol = dacha.currency === 'UZS' ? 'so\'m' : '$';
         const weekdayPrice = parseFloat(dacha.weekday_price || dacha.default_price || 0);
@@ -2572,7 +2572,7 @@ function renderAdminDachas(dachas) {
 
   container.innerHTML = dachas.map(d => {
     const mainImg = (d.media && d.media.length > 0)
-      ? `/storage/${d.media[0].path}`
+      ? (d.media[0].thumbnail_url || d.media[0].url || `/storage/${d.media[0].path}`)
       : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=600&q=80';
 
     let statusBadge = '';
