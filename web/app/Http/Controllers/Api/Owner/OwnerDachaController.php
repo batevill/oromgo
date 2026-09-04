@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Owner;
 use App\Http\Controllers\Controller;
 use App\Models\Dacha;
 use App\Models\DachaMedia;
+use App\Services\GoogleDriveMediaService;
 use App\Services\ImageOptimizerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,10 +14,12 @@ use Illuminate\Support\Facades\Storage;
 class OwnerDachaController extends Controller
 {
     protected ImageOptimizerService $imageOptimizer;
+    protected GoogleDriveMediaService $driveMedia;
 
-    public function __construct(ImageOptimizerService $imageOptimizer)
+    public function __construct(ImageOptimizerService $imageOptimizer, GoogleDriveMediaService $driveMedia)
     {
         $this->imageOptimizer = $imageOptimizer;
+        $this->driveMedia = $driveMedia;
     }
     /**
      * Dacha egasining barcha e'lonlari ro'yxati
@@ -104,25 +107,17 @@ class OwnerDachaController extends Controller
                 $dacha->amenities()->sync($validated['amenities']);
             }
 
-            // Rasmlarni avtomatik WebP ga o'tkazish, siqish va saqlash
+            // Rasmlarni saqlash (Google Drive yoki Local WebP)
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
-                    $path = $this->imageOptimizer->optimizeAndStore($image, 'dachas/images');
-                    $dacha->media()->create([
-                        'type' => 'image',
-                        'path' => $path,
-                    ]);
+                    $this->saveUploadedMedia($dacha, $image, 'image');
                 }
             }
 
-            // Videolarni saqlash
+            // Videolarni saqlash (Google Drive yoki Local)
             if ($request->hasFile('videos')) {
                 foreach ($request->file('videos') as $video) {
-                    $path = $video->store('dachas/videos', 'public');
-                    $dacha->media()->create([
-                        'type' => 'video',
-                        'path' => $path,
-                    ]);
+                    $this->saveUploadedMedia($dacha, $video, 'video');
                 }
             }
 
@@ -208,25 +203,17 @@ class OwnerDachaController extends Controller
                 $dacha->amenities()->sync($request->amenities ?? []);
             }
 
-            // Yangi rasmlarni WebP ga o'tkazish va qo'shish
+            // Yangi rasmlarni qo'shish
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
-                    $path = $this->imageOptimizer->optimizeAndStore($image, 'dachas/images');
-                    $dacha->media()->create([
-                        'type' => 'image',
-                        'path' => $path,
-                    ]);
+                    $this->saveUploadedMedia($dacha, $image, 'image');
                 }
             }
 
-            // Yangi videolar qo'shish
+            // Yangi videolarni qo'shish
             if ($request->hasFile('videos')) {
                 foreach ($request->file('videos') as $video) {
-                    $path = $video->store('dachas/videos', 'public');
-                    $dacha->media()->create([
-                        'type' => 'video',
-                        'path' => $path,
-                    ]);
+                    $this->saveUploadedMedia($dacha, $video, 'video');
                 }
             }
 
@@ -245,15 +232,7 @@ class OwnerDachaController extends Controller
         $dacha = $this->findOwnerDacha($request, $id);
 
         foreach ($dacha->media as $media) {
-            $dir = dirname($media->path);
-            $filename = basename($media->path);
-            $thumbPath = ($dir === '.' ? '' : $dir . '/') . 'thumb_' . $filename;
-            if (Storage::disk('public')->exists($thumbPath)) {
-                Storage::disk('public')->delete($thumbPath);
-            }
-            if (Storage::disk('public')->exists($media->path)) {
-                Storage::disk('public')->delete($media->path);
-            }
+            $this->deleteMediaFile($media);
         }
 
         $dacha->delete();
@@ -281,23 +260,13 @@ class OwnerDachaController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $path = $this->imageOptimizer->optimizeAndStore($image, 'dachas/images');
-                $media = $dacha->media()->create([
-                    'type' => 'image',
-                    'path' => $path,
-                ]);
-                $uploaded[] = $media;
+                $uploaded[] = $this->saveUploadedMedia($dacha, $image, 'image');
             }
         }
 
         if ($request->hasFile('videos')) {
             foreach ($request->file('videos') as $video) {
-                $path = $video->store('dachas/videos', 'public');
-                $media = $dacha->media()->create([
-                    'type' => 'video',
-                    'path' => $path,
-                ]);
-                $uploaded[] = $media;
+                $uploaded[] = $this->saveUploadedMedia($dacha, $video, 'video');
             }
         }
 
@@ -319,21 +288,64 @@ class OwnerDachaController extends Controller
             return response()->json(['message' => 'Ruxsat berilmagan'], 403);
         }
 
-        $dir = dirname($media->path);
-        $filename = basename($media->path);
-        $thumbPath = ($dir === '.' ? '' : $dir . '/') . 'thumb_' . $filename;
-        if (Storage::disk('public')->exists($thumbPath)) {
-            Storage::disk('public')->delete($thumbPath);
-        }
-        if (Storage::disk('public')->exists($media->path)) {
-            Storage::disk('public')->delete($media->path);
-        }
-
+        $this->deleteMediaFile($media);
         $media->delete();
 
         return response()->json([
             'message' => 'Media fayl o\'chirildi',
         ]);
+    }
+
+    /**
+     * Faylni yuklash va saqlash yordamchisi (Google Drive yoki Local)
+     */
+    protected function saveUploadedMedia(Dacha $dacha, $file, string $type): DachaMedia
+    {
+        $isGoogle = config('filesystems.default') === 'google' 
+            || !empty(config('filesystems.disks.google.clientId'));
+
+        if ($isGoogle) {
+            $res = $this->driveMedia->upload($file, $type);
+            return $dacha->media()->create([
+                'type' => $type,
+                'disk' => $res['disk'],
+                'path' => $res['path'],
+                'file_id' => $res['file_id'],
+            ]);
+        }
+
+        if ($type === 'image') {
+            $path = $this->imageOptimizer->optimizeAndStore($file, 'dachas/images');
+        } else {
+            $path = $file->store('dachas/videos', 'public');
+        }
+
+        return $dacha->media()->create([
+            'type' => $type,
+            'disk' => 'public',
+            'path' => $path,
+            'file_id' => null,
+        ]);
+    }
+
+    /**
+     * Faylni diskdan (Google Drive yoki Local) xavfsiz o'chirish
+     */
+    protected function deleteMediaFile(DachaMedia $media): void
+    {
+        if ($media->disk === 'google') {
+            $this->driveMedia->delete($media->path, 'google');
+        } else {
+            $dir = dirname($media->path);
+            $filename = basename($media->path);
+            $thumbPath = ($dir === '.' ? '' : $dir . '/') . 'thumb_' . $filename;
+            if (Storage::disk('public')->exists($thumbPath)) {
+                Storage::disk('public')->delete($thumbPath);
+            }
+            if (Storage::disk('public')->exists($media->path)) {
+                Storage::disk('public')->delete($media->path);
+            }
+        }
     }
 
     /**

@@ -25,13 +25,28 @@ class DachaMedia extends Model
             return $this->path;
         }
 
+        if ($this->disk === 'google' && !empty($this->file_id)) {
+            if ($this->type === 'video') {
+                return "https://drive.google.com/uc?export=view&id={$this->file_id}";
+            }
+            return "https://lh3.googleusercontent.com/d/{$this->file_id}";
+        }
+
         return asset('storage/' . ltrim($this->path, '/'));
     }
 
     public function getThumbnailUrlAttribute(): string
     {
-        if ($this->type === 'video' || filter_var($this->path, FILTER_VALIDATE_URL)) {
+        if ($this->type === 'video') {
             return $this->url;
+        }
+
+        if (filter_var($this->path, FILTER_VALIDATE_URL)) {
+            return $this->path;
+        }
+
+        if ($this->disk === 'google' && !empty($this->file_id)) {
+            return "https://lh3.googleusercontent.com/d/{$this->file_id}";
         }
 
         $dir = dirname($this->path);

@@ -11,6 +11,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.30",
         "laravel/tinker": "^3.0",
+        "masbug/flysystem-google-drive-ext": "^2.5",
         "socialiteproviders/telegram": "^4.1"
     },
     "require-dev": {
