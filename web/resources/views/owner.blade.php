@@ -171,6 +171,179 @@
       border-radius: var(--radius-md);
       font-size: 0.9rem;
     }
+
+    /* Modern Multi-Image Uploader & Gallery Styles */
+    .media-section-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .media-section-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .media-badge-counter {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #2563eb;
+      background: #eff6ff;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid #bfdbfe;
+    }
+    .dropzone-box {
+      border: 2px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      background: white;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+    .dropzone-box:hover, .dropzone-box.dragover {
+      border-color: #2563eb;
+      background: #f0f7ff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+      transform: translateY(-1px);
+    }
+    .dropzone-icon {
+      font-size: 2.2rem;
+      display: block;
+      margin-bottom: 0.4rem;
+      transition: transform 0.2s;
+    }
+    .dropzone-box:hover .dropzone-icon {
+      transform: scale(1.1);
+    }
+    .dropzone-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.2rem;
+    }
+    .dropzone-sub {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .preview-gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .preview-card {
+      position: relative;
+      background: #0f172a;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .preview-card.is-cover {
+      border-color: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+    .preview-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+    }
+    .preview-card img, .preview-card video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .preview-card .badge-tag {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      z-index: 2;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .preview-card .badge-cover {
+      background: #10b981;
+      color: white;
+    }
+    .preview-card .badge-drive {
+      background: #2563eb;
+      color: white;
+    }
+    .preview-card .badge-type {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      background: rgba(0,0,0,0.65);
+      color: white;
+      font-size: 0.65rem;
+      padding: 1px 5px;
+      border-radius: 4px;
+      z-index: 2;
+    }
+    .preview-card .btn-remove-preview {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 11px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 3;
+      transition: all 0.2s;
+    }
+    .preview-card .btn-remove-preview:hover {
+      background: #dc2626;
+      transform: scale(1.15);
+    }
+    .preview-meta-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+      padding: 10px 5px 3px;
+      color: white;
+      font-size: 0.65rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 1;
+    }
+    .spinner-loading {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spinner-border .75s linear infinite;
+      vertical-align: text-bottom;
+      margin-right: 0.5rem;
+    }
+    @keyframes spinner-border {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body class="owner-layout">
@@ -503,21 +676,55 @@
           </div>
         </div>
 
-        <div id="formExistingMediaContainer" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;"></div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div class="form-group">
-            <label>Rasmlar (Yangi qo'shish, max: 7 ta)</label>
-            <input type="file" id="formDachaImages" class="form-control" accept="image/*" multiple />
+        <!-- Existing Media Section (for Edit mode) -->
+        <div id="formExistingMediaSection" class="media-section-box" style="display: none;">
+          <div class="media-section-title">
+            <span>☁️ Google Drive-dagi mavjud rasmlar & videolar</span>
+            <span class="media-badge-counter" id="existingMediaCount">0 ta fayl</span>
           </div>
-          <div class="form-group">
-            <label>Video (Yangi qo'shish, 1 ta)</label>
-            <input type="file" id="formDachaVideo" class="form-control" accept="video/*" />
-          </div>
+          <div id="formExistingMediaContainer" class="preview-gallery-grid" style="margin-top: 0.5rem;"></div>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem; font-size: 1rem; font-weight: 800; margin-top: 1rem;">
-          💾 Saqlash
+        <!-- New Images Multi-Upload Section -->
+        <div class="media-section-box">
+          <div class="media-section-title">
+            <span>📸 Rasmlar yuklash (Ko'p tanlash / Drag & Drop)</span>
+            <span class="media-badge-counter" id="stagedImagesCount">0 ta tanlandi (max 10)</span>
+          </div>
+          
+          <input type="file" id="formDachaImages" accept="image/jpeg,image/png,image/jpg,image/webp" multiple style="display: none;" onchange="handleImageInputFiles(this.files)" />
+          
+          <div class="dropzone-box" id="imagesDropzone" onclick="document.getElementById('formDachaImages').click()">
+            <span class="dropzone-icon">🖼️</span>
+            <div class="dropzone-label">Rasmlarni bu yerga tashlang yoki tanlash uchun bosing</div>
+            <div class="dropzone-sub">Bir vaqtda bir nechta rasm tanlashingiz mumkin (JPG, PNG, WEBP, har biri max 10MB)</div>
+          </div>
+
+          <!-- Staged images preview gallery -->
+          <div id="formStagedImagesGrid" class="preview-gallery-grid" style="display: none;"></div>
+        </div>
+
+        <!-- Video Upload Section -->
+        <div class="media-section-box">
+          <div class="media-section-title">
+            <span>🎬 Dacha videosi (Ixtiyoriy)</span>
+            <span class="media-badge-counter" id="stagedVideoCount">0 video</span>
+          </div>
+
+          <input type="file" id="formDachaVideo" accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska" style="display: none;" onchange="handleVideoInputFile(this.files[0])" />
+
+          <div class="dropzone-box" id="videoDropzone" onclick="document.getElementById('formDachaVideo').click()">
+            <span class="dropzone-icon">📹</span>
+            <div class="dropzone-label">Videoni bu yerga tashlang yoki tanlang (Max: 1 ta)</div>
+            <div class="dropzone-sub">MP4, MOV format (Max 50MB)</div>
+          </div>
+
+          <!-- Staged video preview -->
+          <div id="formStagedVideoContainer" style="margin-top: 0.75rem; display: none;"></div>
+        </div>
+
+        <button type="submit" id="btnSaveDachaSubmit" class="btn btn-primary" style="width: 100%; padding: 0.95rem; font-size: 1rem; font-weight: 800; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <span>💾 Saqlash</span>
         </button>
       </form>
     </div>
@@ -608,6 +815,7 @@
         document.getElementById('ownerUserName').textContent = user.name;
       }
 
+      initMediaDropzones();
       await loadLocations();
       await Promise.all([
         loadReportsData('this_month'),
@@ -1086,11 +1294,226 @@
       }
     }
 
+    // ==========================================
+    // MULTI-IMAGE & MEDIA STAGING SYSTEM
+    // ==========================================
+    let stagedImages = [];
+    let stagedVideo = null;
+
+    function initMediaDropzones() {
+      const imgDropzone = document.getElementById('imagesDropzone');
+      const vidDropzone = document.getElementById('videoDropzone');
+
+      if (imgDropzone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+          imgDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            imgDropzone.classList.add('dragover');
+          }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+          imgDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            imgDropzone.classList.remove('dragover');
+          }, false);
+        });
+
+        imgDropzone.addEventListener('drop', (e) => {
+          const dt = e.dataTransfer;
+          if (dt && dt.files && dt.files.length > 0) {
+            handleImageInputFiles(dt.files);
+          }
+        }, false);
+      }
+
+      if (vidDropzone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+          vidDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            vidDropzone.classList.add('dragover');
+          }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+          vidDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            vidDropzone.classList.remove('dragover');
+          }, false);
+        });
+
+        vidDropzone.addEventListener('drop', (e) => {
+          const dt = e.dataTransfer;
+          if (dt && dt.files && dt.files.length > 0) {
+            handleVideoInputFile(dt.files[0]);
+          }
+        }, false);
+      }
+    }
+
+    function formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function handleImageInputFiles(files) {
+      if (!files || files.length === 0) return;
+
+      const maxLimit = 10;
+      let addedCount = 0;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        if (!file.type.startsWith('image/')) {
+          showToast(`"${file.name}" rasm fayli emas!`, 'error');
+          continue;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+          showToast(`"${file.name}" 10 MB dan katta (Hajmi: ${formatFileSize(file.size)})`, 'error');
+          continue;
+        }
+
+        if (stagedImages.length >= maxLimit) {
+          showToast(`Eng ko'pi bilan ${maxLimit} ta rasm yuklash mumkin!`, 'warning');
+          break;
+        }
+
+        // Duplicate check by name & size
+        const exists = stagedImages.some(f => f.name === file.name && f.size === file.size);
+        if (!exists) {
+          stagedImages.push(file);
+          addedCount++;
+        }
+      }
+
+      // Reset file input so same file can be re-selected if removed
+      const fileInput = document.getElementById('formDachaImages');
+      if (fileInput) fileInput.value = '';
+
+      renderStagedImagePreviews();
+      if (addedCount > 0) {
+        showToast(`${addedCount} ta yangi rasm qo'shildi`, 'success');
+      }
+    }
+
+    function renderStagedImagePreviews() {
+      const grid = document.getElementById('formStagedImagesGrid');
+      const counter = document.getElementById('stagedImagesCount');
+      if (!grid || !counter) return;
+
+      counter.textContent = `${stagedImages.length} ta tanlandi (max 10)`;
+
+      if (stagedImages.length === 0) {
+        grid.style.display = 'none';
+        grid.innerHTML = '';
+        return;
+      }
+
+      grid.style.display = 'grid';
+      grid.innerHTML = '';
+
+      stagedImages.forEach((file, index) => {
+        const card = document.createElement('div');
+        card.className = `preview-card ${index === 0 ? 'is-cover' : ''}`;
+
+        const objectUrl = URL.createObjectURL(file);
+
+        card.innerHTML = `
+          <img src="${objectUrl}" alt="${file.name}" onload="URL.revokeObjectURL(this.src)" />
+          ${index === 0 ? '<span class="badge-tag badge-cover">🌟 Asosiy Muqova</span>' : ''}
+          <button type="button" class="btn-remove-preview" title="O'chirish" onclick="removeStagedImage(${index})">✕</button>
+          <div class="preview-meta-info">${file.name} (${formatFileSize(file.size)})</div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function removeStagedImage(index) {
+      if (index >= 0 && index < stagedImages.length) {
+        stagedImages.splice(index, 1);
+        renderStagedImagePreviews();
+      }
+    }
+
+    function handleVideoInputFile(file) {
+      if (!file) return;
+
+      if (!file.type.startsWith('video/')) {
+        showToast(`"${file.name}" video fayli emas!`, 'error');
+        return;
+      }
+
+      if (file.size > 50 * 1024 * 1024) {
+        showToast(`Video 50 MB dan katta bo'lmasligi kerak (Hajmi: ${formatFileSize(file.size)})`, 'error');
+        return;
+      }
+
+      stagedVideo = file;
+      renderStagedVideoPreview();
+      showToast('Video yuklashga tanlandi', 'success');
+    }
+
+    function renderStagedVideoPreview() {
+      const container = document.getElementById('formStagedVideoContainer');
+      const counter = document.getElementById('stagedVideoCount');
+      if (!container || !counter) return;
+
+      if (!stagedVideo) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        counter.textContent = '0 video';
+        return;
+      }
+
+      counter.textContent = '1 video tanlandi';
+      container.style.display = 'block';
+
+      const videoUrl = URL.createObjectURL(stagedVideo);
+
+      container.innerHTML = `
+        <div class="preview-card" style="aspect-ratio: 16/9; max-width: 320px;">
+          <video src="${videoUrl}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
+          <span class="badge-tag" style="background: #8b5cf6; color: white;">🎬 Yangi Video</span>
+          <button type="button" class="btn-remove-preview" title="O'chirish" onclick="removeStagedVideo()">✕</button>
+          <div class="preview-meta-info">${stagedVideo.name} (${formatFileSize(stagedVideo.size)})</div>
+        </div>
+      `;
+    }
+
+    function removeStagedVideo() {
+      stagedVideo = null;
+      const fileInput = document.getElementById('formDachaVideo');
+      if (fileInput) fileInput.value = '';
+      renderStagedVideoPreview();
+    }
+
     function openCreateDachaModal() {
       document.getElementById('dachaModalTitle').textContent = "🏡 Yangi dacha e'lonini joylash";
+      document.getElementById('dachaModalSubtitle').textContent = "Dachangiz haqidagi ma'lumotlarni to'ldiring va bir vaqtning o'zida bir nechta rasm yuklang";
       document.getElementById('editDachaId').value = "";
       document.getElementById('ownerDachaForm').reset();
+      
+      // Clear media staging
+      stagedImages = [];
+      stagedVideo = null;
+      renderStagedImagePreviews();
+      renderStagedVideoPreview();
+
+      // Hide existing media section
+      const existingSec = document.getElementById('formExistingMediaSection');
+      if (existingSec) existingSec.style.display = 'none';
       document.getElementById('formExistingMediaContainer').innerHTML = '';
+
       populateRegionSelects();
       handleRegionChange();
       openModal('dachaFormModal');
@@ -1103,6 +1526,7 @@
         return;
       }
       document.getElementById('dachaModalTitle').textContent = "✏️ Dachani tahrirlash";
+      document.getElementById('dachaModalSubtitle').textContent = "Dacha parametrlarini o'zgartiring, yangi rasmlar qo'shing yoki mavjudlarini o'chiring";
       document.getElementById('editDachaId').value = d.id;
       document.getElementById('formDachaName').value = d.name || '';
       document.getElementById('formDachaDescription').value = d.description || '';
@@ -1112,27 +1536,44 @@
       document.getElementById('formDachaWeekdayPrice').value = d.weekday_price || '';
       document.getElementById('formDachaWeekendPrice').value = d.weekend_price || '';
 
-      // Rasmlarni tozalash
-      document.getElementById('formDachaImages').value = '';
-      document.getElementById('formDachaVideo').value = '';
+      // Reset staging
+      stagedImages = [];
+      stagedVideo = null;
+      renderStagedImagePreviews();
+      renderStagedVideoPreview();
 
-      // Eski medialarni ko'rsatish
+      // Eski Google Drive medialarini ko'rsatish
+      const existingSection = document.getElementById('formExistingMediaSection');
       const mediaContainer = document.getElementById('formExistingMediaContainer');
+      const existingCount = document.getElementById('existingMediaCount');
       mediaContainer.innerHTML = '';
+
       if (d.media && d.media.length > 0) {
-        d.media.forEach(m => {
-          const div = document.createElement('div');
-          div.style = "position: relative; width: 80px; height: 80px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border);";
+        existingSection.style.display = 'block';
+        existingCount.textContent = `${d.media.length} ta fayl mavjud`;
+
+        d.media.forEach((m, idx) => {
+          const card = document.createElement('div');
+          card.className = `preview-card ${idx === 0 && m.type !== 'video' ? 'is-cover' : ''}`;
+          
           if (m.type === 'video') {
-            div.innerHTML = `<video src="${m.url}" style="width: 100%; height: 100%; object-fit: cover;" muted></video>
-                             <button type="button" style="position: absolute; top: 2px; right: 2px; background: rgba(255,0,0,0.8); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;" onclick="deleteDachaMedia(${m.id}, ${d.id})">✕</button>
-                             <span style="position: absolute; bottom: 2px; left: 2px; background: rgba(0,0,0,0.6); color: white; font-size: 8px; padding: 2px 4px; border-radius: 4px;">🎬 Vid</span>`;
+            card.innerHTML = `
+              <video src="${m.url}" style="width: 100%; height: 100%; object-fit: cover;" muted></video>
+              <span class="badge-tag" style="background: #8b5cf6; color: white;">🎬 Video</span>
+              <button type="button" class="btn-remove-preview" title="Google Drive-dan o'chirish" onclick="deleteDachaMedia(${m.id}, ${d.id})">✕</button>
+              <span class="badge-type">Google Drive</span>
+            `;
           } else {
-            div.innerHTML = `<img src="${m.url}" style="width: 100%; height: 100%; object-fit: cover;" />
-                             <button type="button" style="position: absolute; top: 2px; right: 2px; background: rgba(255,0,0,0.8); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;" onclick="deleteDachaMedia(${m.id}, ${d.id})">✕</button>`;
+            card.innerHTML = `
+              <img src="${m.url}" alt="Dacha rasm" loading="lazy" />
+              ${idx === 0 ? '<span class="badge-tag badge-cover">🌟 Asosiy Muqova</span>' : '<span class="badge-tag badge-drive">☁️ Drive</span>'}
+              <button type="button" class="btn-remove-preview" title="Google Drive-dan o'chirish" onclick="deleteDachaMedia(${m.id}, ${d.id})">✕</button>
+            `;
           }
-          mediaContainer.appendChild(div);
+          mediaContainer.appendChild(card);
         });
+      } else {
+        existingSection.style.display = 'none';
       }
 
       populateRegionSelects();
@@ -1140,7 +1581,6 @@
       // Select region
       const regSelect = document.getElementById('formDachaRegion');
       if (d.region) {
-        // Agar viloyat ro'yxatda bo'lmasa, qo'shib qo'yamiz
         let exists = Array.from(regSelect.options).some(opt => opt.value === d.region);
         if (!exists) {
           const opt = document.createElement('option');
@@ -1171,6 +1611,7 @@
     async function handleSaveDacha(e) {
       e.preventDefault();
       const editId = document.getElementById('editDachaId').value;
+      const submitBtn = document.getElementById('btnSaveDachaSubmit');
       
       const formData = new FormData();
       formData.append('name', document.getElementById('formDachaName').value);
@@ -1183,23 +1624,24 @@
       formData.append('weekday_price', document.getElementById('formDachaWeekdayPrice').value);
       formData.append('weekend_price', document.getElementById('formDachaWeekendPrice').value);
 
-      const imagesInput = document.getElementById('formDachaImages');
-      if (imagesInput.files.length > 7) {
-        showToast('Eng ko\'pi bilan 7 ta rasm yuklash mumkin', 'error');
-        return;
-      }
-      for (let i = 0; i < imagesInput.files.length; i++) {
-        formData.append('images[]', imagesInput.files[i]);
+      // Add all staged multi-images
+      for (let i = 0; i < stagedImages.length; i++) {
+        formData.append('images[]', stagedImages[i]);
       }
 
-      const videoInput = document.getElementById('formDachaVideo');
-      if (videoInput.files.length > 0) {
-        formData.append('videos[]', videoInput.files[0]);
+      // Add staged video if exists
+      if (stagedVideo) {
+        formData.append('videos[]', stagedVideo);
       }
 
       if (editId) {
         formData.append('_method', 'PUT');
       }
+
+      // Show interactive loading state
+      const originalBtnHtml = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span class="spinner-loading"></span> <span>Google Drive-ga saqlanmoqda (${stagedImages.length} ta rasm)...</span>`;
 
       try {
         const url = editId ? `${API_BASE}/owner/dachas/${editId}` : `${API_BASE}/owner/dachas`;
@@ -1212,26 +1654,34 @@
 
         const data = await res.json();
         if (res.ok) {
-          showToast(editId ? 'Dacha yangilandi!' : 'Dacha muvaffaqiyatli qo\'shildi!', 'success');
+          showToast(editId ? 'Dacha va rasmlar yangilandi!' : 'Dacha va barcha rasmlar Google Drive-ga muvaffaqiyatli saqlandi! 🎉', 'success');
           closeModal('dachaFormModal');
+          
+          // Clear staging
+          stagedImages = [];
+          stagedVideo = null;
+
           await Promise.all([loadDachasData(), loadReportsData()]);
         } else {
-          showToast(data.message || 'Xatolik', 'error');
+          showToast(data.message || 'Saqlashda xatolik yuz berdi', 'error');
         }
       } catch (err) {
-        showToast('Server xatosi', 'error');
+        showToast('Server xatosi yuz berdi', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHtml;
       }
     }
 
     async function deleteDachaMedia(mediaId, dachaId) {
-      if (!confirm('Rostdan ham ushbu faylni o\'chirmoqchimisiz?')) return;
+      if (!confirm('Rostdan ham ushbu faylni Google Drive-dan butunlay o\'chirmoqchimisiz?')) return;
       try {
         const res = await fetch(`${API_BASE}/owner/media/${mediaId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
         });
         if (res.ok) {
-          showToast('Media fayl o\'chirildi', 'success');
+          showToast('Fayl Google Drive-dan o\'chirildi', 'success');
           await loadDachasData();
           openEditDachaModal(dachaId);
         } else {

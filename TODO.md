@@ -30,11 +30,14 @@ Ushbu hujjat Oromgo platformasini yuqori yuklama (High-Load), ko'p sonli foydala
 
 ---
 
-### [x] 4. 🖼️ Media Fayllar va WebP Avtomatik Siqish (Media Optimization) ✅
-- [x] Rasmlarni server diskida (`storage/public`) xavfsiz saqlash va kelgusida Cloudflare bepul CDN orqali tarqatishga tayyorlash.
-- [x] Yuklanayotgan rasmlarni avtomatik tarzda zamonaviy `WebP` formatiga o'tkazish, EXIF orientatsiyasini to'g'rilash va sifatini yo'qotmasdan siqish (`ImageOptimizerService`).
-- [x] Kartochkalar va tezkor ko'rinish uchun avtomatik `thumb_` (400px) o'lchamdagi WebP generatsiya qilish (`thumbnail_url`).
-- [x] Tarmoq trafigi va rasmlar yuklanish vaqtini 80-90% ga qisqartirish.
+### [x] 4. 🖼️ Media Fayllar, 5TB Google Drive Storage & Multi-Image Uploader ✅
+- [x] **5 TB Google Drive Cloud Storage:** Barcha dacha rasmlari va videolari to'g'ridan-to'g'ri Google Drive bulutiga (`images/YYYY/M` va `videos/YYYY/M` papkalarida) oqimli (Stream) yuklanishi yo'lga qo'yildi.
+- [x] **Google CDN (lh3.googleusercontent.com):** Rasmlar Google global CDN orqali maksimal tezlikda uzatiladi, server xotirasi va trafigi 100% tejaladi.
+- [x] **Zamonaviy Multi-Image Drag & Drop Uploader:** 
+  - Bir vaqtda 10 tagacha rasmni birvarakay tanlash va Drag & Drop qilish imkoniyati.
+  - Jonli prevyu galereyasi (Real-time Preview), fayl hajmi va formati ko'rinishi.
+  - Har bir rasmni alohida o'chirish (✕) yoki tahrirlashda Google Drive-dan bitta bosishda tozalash.
+  - Asosiy muqova (🌟 Cover) indikatori va yuklash jarayonida interaktiv yuklanish animatsiyasi (Loading Spinner).
 
 ---
 
