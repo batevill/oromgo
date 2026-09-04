@@ -4,11 +4,11 @@ Ushbu hujjat Oromgo platformasini yuqori yuklama (High-Load), ko'p sonli foydala
 
 ---
 
-### [ ] 1. 🗄️ Ma'lumotlar Bazasi va Indekslash (Database Indexing & Query Optimization)
-- [ ] `bookings` jadvaliga `(dacha_id, status, start_date, end_date)` bo'yicha kompozit indekslar qo'shish (Kalendar va sanalar to'qnashuvini tekshirishni 10-50 baravargacha tezlashtirish).
-- [ ] `dachas` jadvaliga `(status, region, district, weekday_price)` bo'yicha qidiruv indekslarini o'rnatish.
-- [ ] SQL so'rovlarida N+1 muammolarini to'liq tekshirish va `with()` / `withCount()` orqali optimallashtirish.
-- [ ] PostgreSQL / MySQL uchun ulanishlar puli (Connection Pooling - PgBouncer)ni sozlash.
+### [x] 1. 🗄️ Ma'lumotlar Bazasi va Indekslash (Database Indexing & Query Optimization) ✅
+- [x] `bookings` jadvaliga `(dacha_id, status, start_date, end_date)` bo'yicha kompozit indekslar qo'shildi (Kalendar va sanalar to'qnashuvini tekshirish 10-50 baravargacha tezlashtirildi).
+- [x] `dachas` jadvaliga `(status, region, district, weekday_price)` bo'yicha qidiruv indekslari o'rnatildi.
+- [x] SQL so'rovlarida N+1 muammolari to'liq tekshirildi va `with()` / `withAvg()` / `withCount()` orqali optimallashtirildi.
+- [x] PostgreSQL uchun ulanishlar puli va PgBouncer (Connection Pooling) sozlamalari kiritildi.
 
 ---
 

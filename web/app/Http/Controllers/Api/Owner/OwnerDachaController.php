@@ -18,6 +18,8 @@ class OwnerDachaController extends Controller
     {
         $dachas = Dacha::where('user_id', $request->user()->id)
             ->with(['media', 'amenities'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->latest()
             ->paginate(15);
 

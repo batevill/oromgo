@@ -135,7 +135,14 @@ class OwnerReportService
             }
         }
 
-        // 7. Oylik trend (So'nggi 6 oy)
+        // 7. Oylik trend (So'nggi 6 oy - 1 ta yagona SQL so'rov bilan optimallashtirilgan)
+        $trendStart = $now->copy()->subMonths(5)->startOfMonth();
+        $trendEnd = $now->copy()->endOfMonth();
+        $trendAllBookings = Booking::whereIn('dacha_id', $targetDachaIds)
+            ->whereIn('status', ['confirmed', 'completed'])
+            ->whereBetween('start_date', [$trendStart->format('Y-m-d'), $trendEnd->format('Y-m-d')])
+            ->get(['id', 'dacha_id', 'total_price', 'currency', 'start_date']);
+
         $monthlyTrend = [];
         for ($i = 5; $i >= 0; $i--) {
             $mStart = $now->copy()->subMonths($i)->startOfMonth();
@@ -143,10 +150,10 @@ class OwnerReportService
             $mKey = $mStart->format('Y-m');
             $mName = $mStart->translatedFormat('M Y');
 
-            $mBookings = Booking::whereIn('dacha_id', $targetDachaIds)
-                ->whereIn('status', ['confirmed', 'completed'])
-                ->whereBetween('start_date', [$mStart->format('Y-m-d'), $mEnd->format('Y-m-d')])
-                ->get();
+            $mBookings = $trendAllBookings->filter(function ($b) use ($mStart, $mEnd) {
+                $bDate = Carbon::parse($b->start_date);
+                return $bDate->betweenIncluded($mStart, $mEnd);
+            });
 
             $mIncomeUZS = $mBookings->where('currency', 'UZS')->sum('total_price');
             $mIncomeUSD = $mBookings->where('currency', 'USD')->sum('total_price');

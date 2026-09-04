@@ -115,8 +115,10 @@ class DachaController extends Controller
             });
         }
 
-        // Qisqa ma'lumotlarni qaytaramiz (rasmlari bilan birga)
-        $dachas = $query->with('media')
+        // Qisqa ma'lumotlarni qaytaramiz (rasmlari, qulayliklari va reytingi bilan birga - N+1 optimallashtirilgan)
+        $dachas = $query->with(['media', 'amenities'])
+                        ->withAvg('reviews', 'rating')
+                        ->withCount('reviews')
                         ->latest()
                         ->paginate(15);
 

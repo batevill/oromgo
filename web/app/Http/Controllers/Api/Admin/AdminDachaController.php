@@ -15,6 +15,8 @@ class AdminDachaController extends Controller
     public function index(Request $request)
     {
         $query = Dacha::with(['owner:id,name,phone,email,avatar', 'media', 'amenities'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->latest();
 
         // Status bo'yicha filtr

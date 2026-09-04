@@ -68,12 +68,31 @@ class Dacha extends Model
 
     public function getAvgRatingAttribute(): float
     {
+        if (array_key_exists('reviews_avg_rating', $this->attributes)) {
+            return $this->attributes['reviews_avg_rating'] !== null
+                ? (float) round($this->attributes['reviews_avg_rating'], 1)
+                : 5.0;
+        }
+
+        if ($this->relationLoaded('reviews')) {
+            $avg = $this->reviews->avg('rating');
+            return $avg ? (float) round($avg, 1) : 5.0;
+        }
+
         $avg = $this->reviews()->avg('rating');
         return $avg ? (float) round($avg, 1) : 5.0;
     }
 
     public function getReviewsCountAttribute(): int
     {
+        if (array_key_exists('reviews_count', $this->attributes)) {
+            return (int) $this->attributes['reviews_count'];
+        }
+
+        if ($this->relationLoaded('reviews')) {
+            return $this->reviews->count();
+        }
+
         return $this->reviews()->count();
     }
 }
